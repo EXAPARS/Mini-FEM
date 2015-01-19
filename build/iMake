@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Libraries path
-DC_PATH="$HOME/Dassault/DC"
+DC_PATH="/home/nmoller/DC_lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
-METIS_PATH="$HOME/Programs/METIS"
+METIS_PATH="/home/lthebault/Programs/METIS"
 METIS_INCLUDE="$METIS_PATH/include"
 METIS_LIBRARIES="$METIS_PATH/lib/libmetis.a"
-CILKVIEW_INCLUDE="$HOME/Programs/CilkTools/include/cilktools"
+CILKVIEW_INCLUDE="/home/lthebaul/Programs/CilkTools/include/cilktools"
 
 # Case insensitive comparisons
 shopt -s nocasematch
@@ -27,13 +27,16 @@ ARCHI=0
 TREE=0
 STATS=0
 OPTIMIZED=0
-OPENMP=0
 DEBUG=0
 VERBOSE=0
 MATT=0
 PAPI=0
 VTUNE=0
 CILKVIEW=0
+OPENMP=0
+CILK=0
+REF=0
+
 for i in $@; do
 	if [[ $i == "clean" ]]; then
 	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
@@ -47,23 +50,25 @@ for i in $@; do
 		exit
 	elif [[ $i == "ref" ]]; then
 		VERSION="REF"
+        REF=1
+        CILK=1
 	elif [[ $i == "coloring" ]]; then
 		VERSION="COLORING"
         OPENMP=1
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
-    elif [[ $i == "hybrid" ]]; then
+	elif [[ $i == "hybrid" ]]; then
         VERSION="DC"
-        HYBRID=1
-    elif [[ $i == "sse" ]]; then
+	    HYBRID=1
+	elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
-    elif [[ $i == "avx" ]]; then
-        ARCHI="AVX"
-    elif [[ $i == "mic" ]]; then
+	elif [[ $i == "avx" ]]; then
+	    ARCHI="AVX"
+	elif [[ $i == "mic" ]]; then
         ARCHI="MIC"
 	elif [[ $i == "tree" ]]; then
 		TREE=1
-    elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
+	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
         STATS=1
 	elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
 		OPTIMIZED=1
@@ -75,14 +80,16 @@ for i in $@; do
 		VERBOSE=1
 	elif [[ $i == "matt" ]]; then
 		MATT=1
-        DEBUG=1
+	        DEBUG=1
 	elif [[ $i == "papi" ]]; then
 		PAPI=1
 	elif [[ $i == "vtune" ]]; then
 		VTUNE=1
-        DEBUG=1
+        	DEBUG=1
 	elif [[ $i == "cilkview" ]]; then
 		CILKVIEW=1
+    elif [[ $i == "cilk" ]]; then
+        CILK=1
 	else
 		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
 	fi
@@ -99,15 +106,25 @@ if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
+# Obligation to choose between Cilk and OpenMP
+if [[ $VERSION == "dc" ]] && [[ $OPENMP == 1 ]] && [[ $CILK == 1 ]]; then
+    echo -e "\\033[1;31mPlease choose between Cilk and OpenMP.\\033[0;39m"
+    exit
+fi
+# Obligation to specify Cilk or OpenMP
+if [[ $VERSION == "dc" ]] && [[ $OPENMP == 0 ]] && [[ $CILK == 0 ]]; then
+    echo -e "\\033[1;31mPlease specify ooooo the multithreading library (Cilk or OpenMP).\
+             \\033[0;39m"
+    exit
+fi
+
+
 
 # Configure D&C library
 DC_ARGUMENTS=""
 if [[ $HYBRID == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_Hybrid_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS hybrid $ARCHI"
-elif [[ $ARCHI == "mic" ]]; then
-    DC_LIBRARIES=$DC_LIBRARIES\_$ARCHI
-    DC_ARGUMENTS="$DC_ARGUMENTS mic"
 fi
 if [[ $TREE == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_TreeCreation
@@ -123,6 +140,20 @@ if [[ $DEBUG == 1 ]]; then
 fi
 if [[ $VERBOSE == 1 ]]; then
     DC_ARGUMENTS="$DC_ARGUMENTS verbose"
+fi
+if [[ $OPENMP == 1 ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_OpenMP
+    DC_ARGUMENTS="$DC_ARGUMENTS omp"
+fi
+if [[ $CILK == 1 ]] && [[ $REF == 0 ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_Cilk
+    DC_ARGUMENTS="$DC_ARGUMENTS cilk"
+fi
+if [[ $CILK == 1 ]] && [[ $REF == 1 ]]; then
+    DC_ARGUMENTS="$DC_ARGUMENTS cilk"
+fi
+if [[ $VERSION == "ref" ]]; then
+    DC_ARGUMENTS="$DC_ARGUMENTS ref"
 fi
 DC_LIBRARIES=$DC_LIBRARIES.so
 
@@ -150,6 +181,7 @@ if [[ $ARCHI == "mic" ]]; then
               -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
               -DOPTIMIZED=$OPTIMIZED -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     else
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
@@ -158,6 +190,7 @@ if [[ $ARCHI == "mic" ]]; then
               -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
               -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \
               -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     fi
 else
@@ -167,6 +200,7 @@ else
               -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
               -DOPTIMIZED=$OPTIMIZED -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     else
         cmake -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
@@ -174,6 +208,7 @@ else
               -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
               -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \
               -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     fi
 fi
