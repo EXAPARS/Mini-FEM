@@ -1,11 +1,10 @@
 #!/bin/sh
 
 # Set the parameters
-EXE_DIR=$HOME/Dassault/MiniApp/exe
+EXE_DIR=$HOME/lthebaul/MiniFEM/exe
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
 NB_ITERATIONS=50
-FILE=./tmpFile_$NB_NODES
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
@@ -20,14 +19,15 @@ do
         export elemPerPart=$PART_SIZE
    	    echo "$TEST_CASE $OPERATOR, $PART_SIZE elements max per partition"
 
-        for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
+        for VERSION in 'DC_left' 'DC_right' 'DC_both' #'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
         do
-            BINARY=./bin/miniApp_$VERSION\_$VECTOR_LENGTH
+            BINARY=./bin/miniFEM_$VERSION
+            OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES
             echo -e "\n$VERSION"
 
-            for NB_PROCESS in 1 4 8 12 16 32
+            for NB_PROCESS in 1 #4 8 12 16 32
             do
-                for NB_THREADS in 1 2 4 8 12 16
+                for NB_THREADS in 16 #1 2 4 8 12 16
                 do
                     let "nbCores=$NB_PROCESS*$NB_THREADS"
                     if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
@@ -38,7 +38,7 @@ do
                     echo "$NB_PROCESS processus, $NB_THREADS threads"
 
        	            mpirun -np $NB_PROCESS $BINARY $TEST_CASE $OPERATOR \
-                               $NB_ITERATIONS > $FILE
+                               $NB_ITERATIONS > $OUTPUT_FILE
 
        	            matrixASM=0
        	            precond=0
@@ -64,7 +64,7 @@ do
                             fi
                             firstPrecond=0
        	            	fi
-       	            done < $FILE
+       	            done < $OUTPUT_FILE
        	            let "matrixASM=$matrixASM/($NB_ITERATIONS-1)"
        	            let "precond=$precond/($NB_ITERATIONS-1)"
                     let "total=$matrixASM+$precond"

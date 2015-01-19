@@ -34,7 +34,7 @@ extern "C" {
 }
 
 // Global variables
-string meshName, operatorName;
+string meshName, operatorName, dataPath = "/scratch/lthebaul/DC_Data/";
 int *colorToElem = nullptr;
 int nbTotalColors;
 //int MAX_ELEM_PER_PART = strtol (getenv ("elemPerPart"), nullptr, 0);
@@ -101,7 +101,7 @@ int main (int argCount, char **argValue)
 	double t1, t2;
 	int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *intfIndex, *intfNodes,
         *dispList, *neighborList, *boundNodesCode, *boundNodesList,
-        *checkBounds, *elemToEdge;
+        *checkBounds, *elemToEdge = nullptr;
 	int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
         nbBoundNodes, operatorDim, operatorID, error;
 
@@ -120,10 +120,9 @@ int main (int argCount, char **argValue)
         cout << "Reading input data...                ";
         t1 = MPI_Wtime ();
     }
-	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex,
-                     &intfNodes, &dispList, &boundNodesCode, &nbElem, &nbNodes,
-                     &nbEdges, &nbIntf, &nbIntfNodes, &nbDispNodes,
-                     &nbBoundNodes, nbBlocks, mpiRank);
+	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
+                     &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
+                     &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, mpiRank);
     if (mpiRank == 0) {
         t2 = MPI_Wtime ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
@@ -131,9 +130,9 @@ int main (int argCount, char **argValue)
 
     #ifdef DC
         #ifdef HYBRID
-            string treePath = "../data/" + meshName + "/DC_tree/" + "Hybrid_" +
+            string treePath = dataPath + meshName + "/DC_tree/" + "Hybrid_" +
         #else
-            string treePath = "../data/" + meshName + "/DC_tree/" + "DC_" +
+            string treePath = dataPath + meshName + "/DC_tree/" + "DC_" +
         #endif
                               to_string ((long long)MAX_ELEM_PER_PART) + "_" +
                               to_string ((long long)nbBlocks) + "_" +

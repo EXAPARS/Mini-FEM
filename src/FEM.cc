@@ -48,8 +48,8 @@ double compute_double_norm (double *tab, int size)
 }
 
 // Check if current assembly results match to the reference version
-void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges,
-                     int nbNodes, int operatorDim, int nbBlocks, int mpiRank)
+void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
+                     int operatorDim, int nbBlocks, int mpiRank)
 {
 	double refMatrixNorm, refPrecNorm, MatrixNorm, precNorm;
 	read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, mpiRank);

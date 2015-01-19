@@ -30,10 +30,9 @@ void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
 // Read input data from DefMesh
 void read_input_data (double **coord, int **elemToNode, int **neighborList,
                       int **intfIndex, int **intfNodes, int **dispList,
-                      int **boundNodesCode, int *nbElem, int *nbNodes,
-                      int *nbEdges, int *nbIntf, int *nbIntfNodes,
-                      int *nbDispNodes, int *nbBoundNodes, int nbBlocks,
-                      int mpiRank);
+                      int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
+                      int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
+                      int *nbBoundNodes, int nbBlocks, int mpiRank);
 
 // Store necessary data from DefMesh
 extern "C"

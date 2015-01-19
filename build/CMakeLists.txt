@@ -12,7 +12,7 @@ enable_language (Fortran)
 find_package (MPI)
 
 # Flags
-set (flags "-O3 -mkl:sequential -D${VERSION}")
+set (flags "-O2 -mkl:sequential -D${VERSION}")
 if (${HYBRID})
 	set (flags "${flags} -DHYBRID")
 endif (${HYBRID})
