@@ -24,7 +24,12 @@ void create_elemToEdge (int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNo
                         int *elemToEdge, int nbElem)
 {
     // For each element
+    #ifdef OMP
+    #pragma omp parallel for
+    for (int i = 0; i < nbElem; i++) {
+    #else
     cilk_for (int i = 0; i < nbElem; i++) {
+    #endif
         int ctr = 0;
         // For each edge of current element
         for (int j = 0; j < DIM_ELEM; j++) {
