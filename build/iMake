@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Libraries path
-DC_PATH="$HOME/lthebaul/DC_lib"
+DC_PATH="$HOME/Dassault/DC"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
@@ -97,6 +97,10 @@ if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] &&
 fi
 if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
+    exit
+fi
+if [ ! -d "$DC_PATH" ]; then
+    echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
 
