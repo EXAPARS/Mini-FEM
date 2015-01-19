@@ -26,7 +26,7 @@
 void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks,
                         int mpiRank)
 {
-	string fileName = "../data/" + meshName + "/checkings/" + operatorName + "_"
+	string fileName = dataPath + meshName + "/checkings/" + operatorName + "_"
                       + to_string ((long long)nbBlocks) + "_"
                       + to_string ((long long)mpiRank);
     ifstream refASM (fileName, ios::in);
@@ -66,7 +66,7 @@ void read_input_data (double **coord, int **elemToNode, int **neighborList,
                       int *nbDispNodes, int *nbBoundNodes, int nbBlocks,
                       int mpiRank)
 {
-	string fileName = "../data/" + meshName + "/inputs/" + operatorName + "_"
+	string fileName = dataPath + meshName + "/inputs/" + operatorName + "_"
                       + to_string ((long long)nbBlocks) + "_"
                       + to_string ((long long)mpiRank);
 	ifstream inputFile (fileName, ios::in | ios::binary);
