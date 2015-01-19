@@ -1,2 +1,2 @@
-rm miniApp_* tmpFile* mesures_miniApp.o* mesures_miniApp.e*
-rm elemPerLeaf* colorPerLeaf* elemPerColor* elemToElem* dcTree* 2Dmatrix*
+rm -f miniApp_* tmpFile* mesures_miniFEM.o* mesures_miniFEM.e*
+rm -f elemPerLeaf* colorPerLeaf* elemPerColor* elemToElem* dcTree* 2Dmatrix*
