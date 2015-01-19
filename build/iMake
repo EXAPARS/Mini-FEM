@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Libraries path
+DATA_PATH="$HOME/Dassault/DC_Data"
 DC_PATH="$HOME/Dassault/DC"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
@@ -99,6 +100,10 @@ if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
+if [ ! -d "$DATA_PATH" ]; then
+    echo -e "\\033[1;31mIncorrect path to the D&C data\\033[0;39m"
+    exit
+fi
 if [ ! -d "$DC_PATH" ]; then
     echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
@@ -149,6 +154,7 @@ if [[ $ARCHI == "mic" ]]; then
 
     if [[ $TREE == 1 ]]; then
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+              -DDATA_PATH=$DATA_PATH \
               -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
               -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
               -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
@@ -157,6 +163,7 @@ if [[ $ARCHI == "mic" ]]; then
               . -G "Unix Makefiles"
     else
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+              -DDATA_PATH=$DATA_PATH \
               -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
               -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DVERSION=$VERSION \
               -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
@@ -166,14 +173,16 @@ if [[ $ARCHI == "mic" ]]; then
     fi
 else
     if [[ $TREE == 1 ]]; then
-        cmake -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
+        cmake -DDATA_PATH=$DATA_PATH \
+              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
               -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
               -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
               -DOPTIMIZED=$OPTIMIZED -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
               . -G "Unix Makefiles"
     else
-        cmake -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
+        cmake -DDATA_PATH=$DATA_PATH \
+              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
               -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DVERSION=$VERSION \
               -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
               -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \

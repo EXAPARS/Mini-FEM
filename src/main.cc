@@ -34,7 +34,7 @@ extern "C" {
 }
 
 // Global variables
-string meshName, operatorName, dataPath = "/scratch/lthebaul/DC_Data/";
+string meshName, operatorName;
 int *colorToElem = nullptr;
 int nbTotalColors;
 //int MAX_ELEM_PER_PART = strtol (getenv ("elemPerPart"), nullptr, 0);
@@ -130,13 +130,13 @@ int main (int argCount, char **argValue)
 
     #ifdef DC
         #ifdef HYBRID
-            string treePath = dataPath + meshName + "/DC_tree/" + "Hybrid_" +
+            string treePath = DATA_PATH + "/" + meshName + "/DC_tree/Hybrid_"
         #else
-            string treePath = dataPath + meshName + "/DC_tree/" + "DC_" +
+            string treePath = DATA_PATH + "/" + meshName + "/DC_tree/DC_"
         #endif
-                              to_string ((long long)MAX_ELEM_PER_PART) + "_" +
-                              to_string ((long long)nbBlocks) + "_" +
-                              to_string ((long long)mpiRank);
+                              + to_string ((long long)MAX_ELEM_PER_PART) + "_"
+                              + to_string ((long long)nbBlocks) + "_"
+                              + to_string ((long long)mpiRank);
         #ifdef TREE_CREATION
             if (mpiRank == 0) {
                 cout << "Creation of the D&C tree...          ";

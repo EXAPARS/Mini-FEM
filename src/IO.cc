@@ -26,12 +26,12 @@
 void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks,
                         int mpiRank)
 {
-	string fileName = dataPath + meshName + "/checkings/" + operatorName + "_"
-                      + to_string ((long long)nbBlocks) + "_"
+	string fileName = DATA_PATH + "/" + meshName + "/checkings/" + operatorName
+                      + "_" + to_string ((long long)nbBlocks) + "_"
                       + to_string ((long long)mpiRank);
     ifstream refASM (fileName, ios::in);
     if (!refASM.is_open ()) {
-        cerr << "Error: cannot read reference checking!\n";
+        cerr << "Error: cannot read reference checking: " << fileName << "!\n";
         exit (EXIT_FAILURE);
     }
     refASM >> *refMatrixNorm >> *refPrecNorm;
@@ -65,12 +65,12 @@ void read_input_data (double **coord, int **elemToNode, int **neighborList,
                       int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
                       int *nbBoundNodes, int nbBlocks, int mpiRank)
 {
-	string fileName = dataPath + meshName + "/inputs/" + operatorName + "_"
-                      + to_string ((long long)nbBlocks) + "_"
+	string fileName = DATA_PATH + "/" + meshName + "/inputs/" + operatorName
+                      + "_" + to_string ((long long)nbBlocks) + "_"
                       + to_string ((long long)mpiRank);
 	ifstream inputFile (fileName, ios::in | ios::binary);
     if (!inputFile.is_open ()) {
-        cerr << "Error: cannot read input data!\n";
+        cerr << "Error: cannot read input data: " << fileName << "\n";
         exit (EXIT_FAILURE);
     }
 
