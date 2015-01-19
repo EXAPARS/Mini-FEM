@@ -131,9 +131,9 @@ int main (int argCount, char **argValue)
 
     #ifdef DC
         #ifdef HYBRID
-            string treePath = "../data/" + meshName + "/DC_tree/" + "Hybrid_" +
+            string treePath = dataPath + meshName + "/DC_tree/" + "Hybrid_" +
         #else
-            string treePath = "../data/" + meshName + "/DC_tree/" + "DC_" +
+            string treePath = dataPath + meshName + "/DC_tree/" + "DC_" +
         #endif
                               to_string ((long long)MAX_ELEM_PER_PART) + "_" +
                               to_string ((long long)nbBlocks) + "_" +
