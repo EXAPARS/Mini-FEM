@@ -25,7 +25,7 @@
 
 using namespace std;
 
-extern string meshName, operatorName;
+extern string meshName, operatorName, dataPath;
 extern int *colorToElem;
 extern int nbTotalColors;
 
