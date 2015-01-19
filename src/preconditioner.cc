@@ -41,15 +41,15 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
             cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
-       	    for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
-	    	    if (nodeToNodeColumn[j]-1 == i) {
-		    	    for (int k = 0; k < operatorDim; k++) {
-			    	    prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-    			    }   
-       				break;
-	       		}
-	        }
+        for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
+            if (nodeToNodeColumn[j]-1 == i) {
+        	    for (int k = 0; k < operatorDim; k++) {
+            	    prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
+        	    }   
+        		break;
+        	}
         }
+    }
 
 	// MPI communications
     int dimNode = DIM_NODE;
@@ -72,10 +72,10 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
             cilk_for (int i = 1; i <= nbNodes; i++) {
         #endif
     #endif
-	       	int curNode = i;
-            ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
-                              prec, &error, checkBounds, &curNode);
-	    }
+       	int curNode = i;
+        ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
+                          prec, &error, checkBounds, &curNode);
+    }
 }
 
 // Create preconditioner for laplacian operator
@@ -98,13 +98,13 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
     	    cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
-		    for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
-			    if (nodeToNodeColumn[j]-1 == i) {
-				    prec[i] = nodeToNodeValue[j];
-				    break;
-			    }
-		    }
-	    }
+        for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
+    	    if (nodeToNodeColumn[j]-1 == i) {
+    		    prec[i] = nodeToNodeValue[j];
+    		    break;
+    	    }
+        }
+    }
 
 	// MPI communications
 	lap_comm_mpi_ (&nbNodes, prec, &nbBlocks, buffer, &nbIntf, &nbIntfNodes,
