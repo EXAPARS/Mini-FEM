@@ -25,8 +25,6 @@
 #include "coloring.h"
 #include "IO.h"
 
-#include <omp.h>
-
 // External Fortran functions
 extern "C" {
 	void dqmrd4_ (int *nbNodes, int *boundNodesCode, int *nbBoundNodes,

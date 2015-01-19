@@ -31,13 +31,14 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     #ifdef REF
         for (int i = 0; i < nbNodes; i++) {
     #elif COLORING
+        //#pragma omp parallel for
         cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
         #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 0; i < nbNodes; i++) {
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
         #else
-        cilk_for (int i = 0; i < nbNodes; i++) {
+            cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
        	    for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
@@ -61,17 +62,18 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     #ifdef REF
     	for (int i = 1; i <= nbNodes; i++) {
     #elif COLORING
-        cilk_for (int i = 0; i < nbNodes; i++) {
+        //#pragma omp parallel for
+        cilk_for (int i = 1; i <= nbNodes; i++) {
     #elif DC
         #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 1; i <= nbNodes; i++) {
+            #pragma omp parallel for
+            for (int i = 1; i <= nbNodes; i++) {
         #else
-        cilk_for (int i = 1; i <= nbNodes; i++) {
+            cilk_for (int i = 1; i <= nbNodes; i++) {
         #endif
     #endif
 	       	int curNode = i;
-       		ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
+            ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
                               prec, &error, checkBounds, &curNode);
 	    }
 }
@@ -86,13 +88,14 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
     #ifdef REF
     	for (int i = 0; i < nbNodes; i++) {
     #elif COLORING
+        //#pragma omp parallel for
     	cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
         #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 0; i < nbNodes; i++) {
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
         #else
-    	cilk_for (int i = 0; i < nbNodes; i++) {
+    	    cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
 		    for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
@@ -111,13 +114,14 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
     #ifdef REF
     	for (int i = 0; i < nbNodes; i++) {
     #elif COLORING
+        //#pragma omp parallel for
     	cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
         #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 0; i < nbNodes; i++) {
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
         #else
-    	cilk_for (int i = 0; i < nbNodes; i++) {
+    	    cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
 		    prec[i] = 1.0 / prec[i];
@@ -135,13 +139,14 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
     #ifdef REF
         for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
     #elif COLORING
+        //#pragma omp parallel for
         cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
     #elif DC
         #ifdef OMP
-        #pragma omp parallel for
-        for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
         #else
-        cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
+            cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
         #endif
     #endif
 
