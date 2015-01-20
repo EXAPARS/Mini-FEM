@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Set the parameters
+MAX_CORES=240
 EXE_DIR=$HOME/lthebaul/MiniFEM/exe
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
@@ -14,20 +15,20 @@ module load PrgEnv-intel/13.5.192
 
 for OPERATOR in 'ela' #'lap'
 do
-    for PART_SIZE in 200 #50 200 500
+    for PART_SIZE in 50 200 500
     do
         export elemPerPart=$PART_SIZE
    	    echo "$TEST_CASE $OPERATOR, $PART_SIZE elements max per partition"
 
-        for VERSION in 'DC_left' 'DC_right' 'DC_both' #'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
+        for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
         do
             BINARY=./bin/miniFEM_$VERSION
             OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES
             echo -e "\n$VERSION"
 
-            for NB_PROCESS in 1 #4 8 12 16 32
+            for NB_PROCESS in 1 4 8 12 16 32
             do
-                for NB_THREADS in 16 #1 2 4 8 12 16
+                for NB_THREADS in 1 2 4 8 12 16
                 do
                     let "nbCores=$NB_PROCESS*$NB_THREADS"
                     if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi

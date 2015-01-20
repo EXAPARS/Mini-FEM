@@ -11,11 +11,10 @@
 # Set the parameters
 NB_NODES=1
 MAX_CORES=240
-EXE_DIR=$HOME/MiniApp/exe
+EXE_DIR=$HOME/thebault/MiniFEM/exe
 TEST_CASE=EIB
 VECTOR_LENGTH=MIC
 NB_ITERATIONS=50
-FILE=./tmpFile_$NB_NODES
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
@@ -26,13 +25,15 @@ module load mic
 
 for OPERATOR in 'ela' #'lap'
 do
-    for PART_SIZE in 200
+    for PART_SIZE in 50 200 500
     do
+        export elemPerPart=$PART_SIZE
    	    echo "$TEST_CASE $OPERATOR, $PART_SIZE elements max per partition"
 
         for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
         do
-            BINARY=./bin/miniApp_$VERSION\_$VECTOR_LENGTH
+            BINARY=./bin/miniFEM_$VERSION\_$VECTOR_LENGTH
+            OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES
             echo -e "\n$VERSION"
 
             for NB_PROCESS in 1 4 8 12 16 32
@@ -47,7 +48,8 @@ do
                     export OMP_NUM_THREADS=$NB_THREADS
                     echo "$NB_PROCESS processus, $NB_THREADS threads"
 
-       	            ccc_mprun $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS > $FILE
+       	            ccc_mprun $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS \
+                              > $OUTPUT_FILE
 
        	            matrixASM=0
        	            precond=0
@@ -73,7 +75,7 @@ do
                             fi
                             firstPrecond=0
        	            	fi
-       	            done < $FILE
+       	            done < $OUTPUT_FILE
        	            let "matrixASM=$matrixASM/($NB_ITERATIONS-1)"
        	            let "precond=$precond/($NB_ITERATIONS-1)"
                     let "total=$matrixASM+$precond"
