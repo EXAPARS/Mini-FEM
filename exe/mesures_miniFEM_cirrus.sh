@@ -1,5 +1,5 @@
 #!/bin/sh
-#MSUB -r miniAppKNC                # Request name
+#MSUB -r miniFEM                   # Request name
 #MSUB -N 1                         # Number of nodes
 #MSUB -n 1                         # Total number of tasks
 #MSUB -c 60                        # Number of cores per task
