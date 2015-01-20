@@ -50,7 +50,7 @@ do
        	            	echo $line | grep -q "Matrix assembly"
        	            	if [ $? == 0 ]; then
        	            		tmpVar=`echo $line | cut -d " " -f5`
-                            echo $tmpVar >> miniApp_$TEST_CASE\_$NB_NODES\_$OPERATOR\_$PART_SIZE\_$VERSION\_$NB_PROCESS\_$NB_THREADS.ASM
+                            echo $tmpVar >> miniFEM_$TEST_CASE\_$NB_NODES\_$OPERATOR\_$PART_SIZE\_$VERSION\_$NB_PROCESS\_$NB_THREADS.ASM
                             if [ $firstASM == 0 ]; then
        	            		    let "matrixASM=$matrixASM+$tmpVar"
                             fi
@@ -59,7 +59,7 @@ do
        	            	echo $line | grep -q "Preconditioner"
        	            	if [ $? == 0 ]; then
        	            		tmpVar=`echo $line | cut -d " " -f4`
-                            echo $tmpVar >> miniApp_$TEST_CASE\_$NB_NODES\_$OPERATOR\_$PART_SIZE\_$VERSION\_$NB_PROCESS\_$NB_THREADS.prec
+                            echo $tmpVar >> miniFEM_$TEST_CASE\_$NB_NODES\_$OPERATOR\_$PART_SIZE\_$VERSION\_$NB_PROCESS\_$NB_THREADS.prec
                             if [ $firstPrecond == 0 ]; then
        	            		    let "precond=$precond+$tmpVar"
                             fi
