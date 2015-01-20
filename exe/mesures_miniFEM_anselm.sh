@@ -1,27 +1,17 @@
 #!/bin/sh
-#MSUB -r miniAppKNC                # Request name
-#MSUB -N 1                         # Number of nodes
-#MSUB -n 1                         # Total number of tasks
-#MSUB -c 60                        # Number of cores per task
-#MSUB -T 1800                      # Elapsed time limit in seconds
-#MSUB -o log_%I.o                  # Standard output. %I is the job id
-#MSUB -e log_%I.e                  # Error output. %I is the job id
-#MSUB -q knc                       # Choosing KNC nodes
 
 # Set the parameters
-NB_NODES=1
 MAX_CORES=240
-EXE_DIR=$HOME/thebault/MiniFEM/exe
+EXE_DIR=$HOME/lthebaul/MiniFEM/exe
 TEST_CASE=EIB
-VECTOR_LENGTH=MIC
+VECTOR_LENGTH=AVX
 NB_ITERATIONS=50
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
-set -x
 
 # Load the required modules
-module load mic
+module load PrgEnv-intel/13.5.192
 
 for OPERATOR in 'ela' #'lap'
 do
@@ -32,13 +22,13 @@ do
 
         for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
         do
-            BINARY=./bin/miniFEM_$VERSION\_$VECTOR_LENGTH
+            BINARY=./bin/miniFEM_$VERSION
             OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES
             echo -e "\n$VERSION"
 
             for NB_PROCESS in 1 4 8 12 16 32
             do
-                for NB_THREADS in 1 30 60 120 180 240
+                for NB_THREADS in 1 2 4 8 12 16
                 do
                     let "nbCores=$NB_PROCESS*$NB_THREADS"
                     if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
@@ -48,8 +38,8 @@ do
                     export OMP_NUM_THREADS=$NB_THREADS
                     echo "$NB_PROCESS processus, $NB_THREADS threads"
 
-       	            ccc_mprun $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS \
-                              > $OUTPUT_FILE
+       	            mpirun -np $NB_PROCESS $BINARY $TEST_CASE $OPERATOR \
+                               $NB_ITERATIONS > $OUTPUT_FILE
 
        	            matrixASM=0
        	            precond=0
@@ -89,6 +79,6 @@ do
         done
         echo
     done
-done > miniApp_$TEST_CASE\_$NB_NODES.log
+done > miniFEM_$TEST_CASE\_$NB_NODES.log
 
 exit
