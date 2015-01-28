@@ -1,0 +1,8 @@
+Revoir fctionment CSR en détail
+Dérouler 1ere boucle du prec nodes/CSR sur prec
+Quelles parties de CSRvalue/prec sont utilisées ?
+A-t-on besoin de l'asm complet ?
+
+La suite devrait aller
+comms sur le bout de prec calculé localement
+inversion de ce même bout de prec

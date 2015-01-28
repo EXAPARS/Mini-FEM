@@ -114,19 +114,19 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 		}
 
 		// Preconditioner creation
-	    p1 = DC_get_cycles ();
+        p1 = DC_get_cycles ();
         preconditioner (prec, buffer, nodeToNodeValue, nodeToNodeRow,
                         nodeToNodeColumn, intfIndex, intfNodes, neighborList,
                         checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
                         operatorDim, operatorID, mpiRank);
-	    p2 = DC_get_cycles ();
+        p2 = DC_get_cycles ();
         localElapsed = p2 - p1;
         MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
                     MPI_COMM_WORLD);
-		if (mpiRank == 0) {
-		    cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
-		    if (iter != nbIter) cout << endl;
-		}
+        if (mpiRank == 0) {
+            cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
+            if (iter != nbIter) cout << endl;
+        }
 	}
 
     #ifdef VTUNE

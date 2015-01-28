@@ -128,7 +128,10 @@ int main (int argCount, char **argValue)
         cout << "done  (" << t2 - t1 << " seconds)\n";
     }
 
+    // D&C version
     #ifdef DC
+
+        // Set the path to the D&C tree and permutations
         #ifdef HYBRID
             string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/Hybrid_"
         #else
@@ -137,6 +140,8 @@ int main (int argCount, char **argValue)
                               + to_string ((long long)MAX_ELEM_PER_PART) + "_"
                               + to_string ((long long)nbBlocks) + "_"
                               + to_string ((long long)mpiRank);
+
+        // Creation of the D&C tree and permutations
         #ifdef TREE_CREATION
             if (mpiRank == 0) {
                 cout << "Creation of the D&C tree...          ";
@@ -147,6 +152,8 @@ int main (int argCount, char **argValue)
                 t2 = MPI_Wtime ();
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
+
+        // Reading of the D&C tree and permutations
         #else
             if (mpiRank == 0) {
                 cout << "Reading the D&C tree...              ";
@@ -158,6 +165,8 @@ int main (int argCount, char **argValue)
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
         #endif
+
+        // Apply permutations
         if (mpiRank == 0) {
             cout << "Applying permutation...              ";
             t1 = MPI_Wtime ();
@@ -174,7 +183,11 @@ int main (int argCount, char **argValue)
             t2 = MPI_Wtime ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
+
+    // Mesh coloring version
     #elif COLORING
+
+        // Create the coloring
         if (mpiRank == 0) {
             cout << "Coloring of the mesh...              ";
             t1 = MPI_Wtime ();
@@ -185,6 +198,8 @@ int main (int argCount, char **argValue)
             t2 = MPI_Wtime ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
+
+        // Apply the element permutation
         if (mpiRank == 0) {
             cout << "Applying permutation...              ";
             t1 = MPI_Wtime ();
@@ -216,6 +231,7 @@ int main (int argCount, char **argValue)
     	cout << "done  (" << t2 - t1 << " seconds)\n";
     }
 
+    // Finalize and store the D&C tree
     #if defined (DC) && defined (TREE_CREATION)
         if (mpiRank == 0) {
             cout << "Finalizing the D&C tree...           ";
@@ -235,8 +251,8 @@ int main (int argCount, char **argValue)
         }
     #endif
 
+    // Compute the index of each edge of each element
     #ifdef OPTIMIZED
-        // Compute the index of each edge of each element
         if (mpiRank == 0) {
             cout << "Computing edges index...             ";
             t1 = MPI_Wtime ();

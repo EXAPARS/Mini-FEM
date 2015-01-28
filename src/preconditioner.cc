@@ -46,12 +46,12 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 		}
 	}
 
-	// MPI communications
+    // MPI communications
     int dimNode = DIM_NODE;
-	ela_comm_mpi_ (&dimNode, &nbNodes, prec, &nbBlocks, buffer, &nbIntf,
+    ela_comm_mpi_ (&dimNode, &nbNodes, prec, &nbBlocks, buffer, &nbIntf,
                    &nbIntfNodes, neighborList, intfIndex, intfNodes);
 
-	// Inversion of preconditioner
+    // Inversion of preconditioner
     int error;
     #ifdef REF
     	for (int i = 1; i <= nbNodes; i++) {
@@ -61,8 +61,8 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     #elif DC
     	cilk_for (int i = 1; i <= nbNodes; i++) {
     #endif
-		int curNode = i;
-		ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
+        int curNode = i;
+        ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
                           prec, &error, checkBounds, &curNode);
 	}
 }
