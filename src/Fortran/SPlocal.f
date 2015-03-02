@@ -33,8 +33,8 @@
 !
       lerr(1) = nnt.le.ndof
       lerr(2) = ldv.lt.ndof
-      call SPGlOR(lerr,2,lbuf)
-      if(lerr(1).or.lerr(2)) call SP_stop('SPdOPE/[ndof,nnt,ldv]...',-1)
+!      call SPGlOR(lerr,2,lbuf)
+!      if(lerr(1).or.lerr(2)) call SP_stop('SPdOPE/[ndof,nnt,ldv]...',-1)
       fv     = ldv.lt.nnt
 !
       if     (ope.eq.'MIN' .or. ope.eq.'min') then
@@ -52,6 +52,7 @@
 !
       nerr   = 0
       ni2    = 0
+      print *, "Fortran"
       do intf=1,nit
         ni1    = ni2 + 1
         ni2    = inni(intf+1)
@@ -60,16 +61,11 @@
         itype  = 100 + npara(intf,1)
         call MPI_Irecv(b(1,ni1,get),recvcount,dtype,nvproc,itype,       &
      &                 MPI_COMM_WORLD,npara(intf,3),MPI_err)
-!        print *,'[', iblk,']', 'MPI_Irecv, intf=',intf,'from=',nvproc   &
-!     &    ,'tag=', itype, 'npara(intf,3) = ', npara(intf,3)
         if(MPI_err.ne.0) nerr = nerr + 1
-!      if(MPI_out.le.0)                                                  &
-!     &  print 80001,iblk-1,' nvproc/recvcount/itype/npara(3)=',         &
-!     &                     nvproc,recvcount,itype,npara(intf,3)
       enddo
       lerr(1) = nerr.gt.0
-      call SPGlOR(lerr,1,lbuf)
-      if(lerr(1)) call SP_stop('SPdOPE/MPI_Irecv...',-2)
+!      call SPGlOR(lerr,1,lbuf)
+!      if(lerr(1)) call SP_stop('SPdOPE/MPI_Irecv...',-2)
 !
 ! 3.  Buffering local data
 !
@@ -82,6 +78,9 @@
             do ni=ni1,ni2
               i      = nni(ni)
               b(idof,ni,give) = v(idof,i)
+              if ((intf == 1) .AND. (idof == 1) .AND. (ni == ni1)) then
+                print*, iblk-1,": prec(", idof, ",",  i, ") =",v(idof,i)
+              endif
             enddo
           enddo
         enddo
@@ -109,18 +108,14 @@
         ni2    = inni(intf+1)
         sendcount = (ni2 - ni1 + 1)*ndof
         nvproc = npara(intf,1)-1
+!        print *, iblk, ":", ni1, ni2, sendcount, nvproc, itype
         call MPI_Send(b(1,ni1,give),sendcount,dtype,nvproc,itype,       &
      &                MPI_COMM_WORLD,MPI_err)
-!        print *,'[', iblk,']', 'MPI_Send, intf = ', intf, 'dest=',nvproc&
-!     &      ,'tag=', itype, 'iblk =', iblk
         if(MPI_err.ne.0) nerr = nerr + 1
-!      if(MPI_out.le.0)                                                  &
-!     &  print 80001,iblk-1,' nvproc/sendcount/itype=',                  &
-!     &                     nvproc,sendcount,itype
       enddo
       lerr(1) = nerr.gt.0
-      call SPGlOR(lerr,1,lbuf)
-      if(lerr(1)) call SP_stop('SPdOPE/MPI_Send...',-4)
+!      call SPGlOR(lerr,1,lbuf)
+!      if(lerr(1)) call SP_stop('SPdOPE/MPI_Send...',-4)
 !
 ! 5.  Waiting/Checking incoming data
 !
@@ -131,27 +126,22 @@
         ni2    = inni(intf+1)
         sendcount = (ni2 - ni1 + 1)*ndof
         
-!        print *,'[', iblk,']', 'before MPI_Wait '
         call MPI_Wait(npara(intf,3),MPI_status,MPI_err)
-!        print *,'[', iblk,']', 'after MPI_Wait '
         
-        if(MPI_err.eq.0) then
-!      if(MPI_out.le.0)                                                  &
-!     &  print 80001,iblk-1,' npara(3),MPI_status=',                     &
-!     &              npara(intf,3),(MPI_status(i),i=1,4)
-          call MPI_Get_count(MPI_status,dtype,recvcount,MPI_err)
-          if     (MPI_err.ne.0) then
-            nerr   = nerr + 1
-          else if(recvcount.ne.sendcount) then
-            nerr   = nerr + 1
-          endif
-        else
-          nerr   = nerr + 1
-        endif
+!        if(MPI_err.eq.0) then
+!          call MPI_Get_count(MPI_status,dtype,recvcount,MPI_err)
+!          if     (MPI_err.ne.0) then
+!            nerr   = nerr + 1
+!          else if(recvcount.ne.sendcount) then
+!            nerr   = nerr + 1
+!          endif
+!        else
+!          nerr   = nerr + 1
+!        endif
       enddo
       lerr(1) = nerr.gt.0
-      call SPGlOR(lerr,1,lbuf)
-      if(lerr(1)) call SP_stop('SPdOPE/MPI_Wait & MPI_Get_count...',-5)
+!      call SPGlOR(lerr,1,lbuf)
+!      if(lerr(1)) call SP_stop('SPdOPE/MPI_Wait & MPI_Get_count...',-5)
 !
 ! 5.  Assembling local and incoming data
 !

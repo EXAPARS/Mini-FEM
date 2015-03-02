@@ -97,7 +97,7 @@ int main (int argCount, char **argValue)
 
 	// Declarations
     index_t nodeToElem;
-	double *coord, *nodeToNodeValue, *prec, *buffer;
+	double *coord, *nodeToNodeValue, *prec;
 	double t1, t2;
 	int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *intfIndex, *intfNodes,
         *dispList, *neighborList, *boundNodesCode, *boundNodesList,
