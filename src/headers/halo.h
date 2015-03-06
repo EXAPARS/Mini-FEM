@@ -18,8 +18,8 @@
 #define HALO_H
 
 // Halo exchange between MPI domains
-void halo_exchange (double *prec, double *buffer, int *intfIndex, int *intfNodes,
-                    int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
-                    int operatorDim, int mpiRank);
+void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
+                    int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
+                    int mpiRank);
 
 #endif

@@ -20,48 +20,48 @@
 #include "globals.h"
 #include "halo.h"
 
-// Halo exchange between MPI domains
-void halo_exchange (double *prec, double *buffer, int *intfIndex, int *intfNodes,
-                    int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
-                    int operatorDim, int mpiRank)
+// Halo exchange between MPI domains (only for elasticity operator)
+void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
+                    int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
+                    int mpiRank)
 {
+    // Initialize communication buffers
     double *bufferSend = new double [nbIntfNodes*operatorDim];
     double *bufferRecv = new double [nbIntfNodes*operatorDim];
-    int source, dest, size, tag, node1, node2 = -1;
+    int source, dest, size, tag, node1, node2 = 0;
 
     // Initializing reception from adjacent domains
     for (int i = 0; i < nbIntf; i++) {
-        node1  = node2 + 1;
+        node1  = node2;
         node2  = intfIndex[i+1];
         size   = (node2 - node1) * operatorDim;
         source = neighborList[i] - 1;
         tag    = neighborList[i] + 100;
-        MPI_Irecv (&(bufferRecv[node1*operatorDim]), size,
-                   MPI_DOUBLE_PRECISION, source, tag, MPI_COMM_WORLD,
-                   &(neighborList[2*nbIntf+i]));
+        MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
+                   source, tag, MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
     }
 
     // Buffering local data
-    node2 = -1;
+    node2 = 0;
     for (int i = 0; i < nbIntf; i++) {
-        node1 = node2 + 1;
+        node1 = node2;
         node2 = intfIndex[i+1];
-        for (int j = 0; j < operatorDim; j++) {
-            for (int k = node1; k < node2; k++) {
-                int tmpNode = intfNodes[k];
-                bufferSend[k*operatorDim+j] = prec[tmpNode*operatorDim+j];
+        for (int j = node1; j < node2; j++) {
+            for (int k = 0; k < operatorDim; k++) {
+                int tmpNode = intfNodes[j] - 1;
+                bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
             }
         }
     }
 
     // Sending local data to adjacent domains
-    node2 = -1;
+    node2 = 0;
     for (int i = 0; i < nbIntf; i++) {
-        node1 = node2 + 1;
+        node1 = node2;
         node2 = intfIndex[i+1];
         size  = (node2 - node1) * operatorDim;
         dest  = neighborList[i] - 1;
-        tag   = mpiRank + 100;
+        tag   = mpiRank + 101;
         MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION, dest,
                   tag, MPI_COMM_WORLD);
     }
@@ -72,15 +72,18 @@ void halo_exchange (double *prec, double *buffer, int *intfIndex, int *intfNodes
     }
 
     // Assembling local and incoming data
-    node2 = -1;
+    node2 = 0;
     for (int i = 0; i < nbIntf; i++) {
-        node1  = node2 + 1;
+        node1  = node2;
         node2  = intfIndex[i+1];
-        for (int j = 0; j < operatorDim; j++) {
-            for (int k = node1; k < node2; k++) {
-                prec[intfNodes[k]*operatorDim+j] +=
-                    bufferRecv[node1*operatorDim+j];
+        for (int j = node1; j < node2; j++) {
+            for (int k = 0; k < operatorDim; k++) {
+                int tmpNode = intfNodes[j] - 1;
+                prec[tmpNode*operatorDim+k] += bufferRecv[j*operatorDim+k];
             }
         }
     }
+
+    // Free communication buffers
+    delete[] bufferRecv, delete[] bufferSend;
 }
