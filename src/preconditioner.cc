@@ -18,6 +18,7 @@
 
 #include "globals.h"
 #include "preconditioner.h"
+#include "halo.h"
 
 // Create preconditioner for elasticity operator
 void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
@@ -53,8 +54,12 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 
     // MPI communications
     int dimNode = DIM_NODE;
-    ela_comm_mpi_ (&dimNode, &nbNodes, prec, &nbBlocks, buffer, &nbIntf,
-                   &nbIntfNodes, neighborList, intfIndex, intfNodes);
+//    ela_comm_mpi_ (&dimNode, &nbNodes, prec, &nbBlocks, buffer, &nbIntf,
+//                   &nbIntfNodes, neighborList, intfIndex, intfNodes);
+    if (nbBlocks > 1) {
+        halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
+                       nbIntfNodes, operatorDim, mpiRank);
+    }
 
     // Inversion of preconditioner
     int error;

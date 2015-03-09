@@ -579,21 +579,21 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
             #ifdef HYBRID
-                DC_assembly (assembly_lap_seq, assembly_lap_vec, &userArgs,
-                             nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs,
+                                   nodeToNodeValue, operatorDim);
             #else
-                DC_assembly (assembly_lap_seq, nullptr, &userArgs, nodeToNodeValue,
-                             operatorDim);
+                DC_tree_traversal (assembly_lap_seq, nullptr, &userArgs,
+                                   nodeToNodeValue, operatorDim);
             #endif
         }
         // Using elasticity operator
         else {
             #ifdef HYBRID
-                DC_assembly (assembly_ela_seq, assembly_ela_vec, &userArgs,
-                             nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs,
+                                   nodeToNodeValue, operatorDim);
             #else
-                DC_assembly (assembly_ela_seq, nullptr, &userArgs, nodeToNodeValue,
-                             operatorDim);
+                DC_tree_traversal (assembly_ela_seq, nullptr, &userArgs,
+                                   nodeToNodeValue, operatorDim);
             #endif
         }
     #endif
