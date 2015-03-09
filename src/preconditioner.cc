@@ -34,17 +34,22 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
         //#pragma omp parallel for
         cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
-        cilk_for (int i = 0; i < nbNodes; i++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
+        #else
+            cilk_for (int i = 0; i < nbNodes; i++) {
+        #endif
     #endif
-		for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
-			if (nodeToNodeColumn[j]-1 == i) {
-				for (int k = 0; k < operatorDim; k++) {
-					prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-				}
-				break;
-			}
-		}
-	}
+        for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
+            if (nodeToNodeColumn[j]-1 == i) {
+        	    for (int k = 0; k < operatorDim; k++) {
+            	    prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
+        	    }   
+        		break;
+        	}
+        }
+    }
 
     // MPI communications
     int dimNode = DIM_NODE;
@@ -53,18 +58,24 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 
     // Inversion of preconditioner
     int error;
+
     #ifdef REF
     	for (int i = 1; i <= nbNodes; i++) {
     #elif COLORING
         //#pragma omp parallel for
         cilk_for (int i = 1; i <= nbNodes; i++) {
     #elif DC
-    	cilk_for (int i = 1; i <= nbNodes; i++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 1; i <= nbNodes; i++) {
+        #else
+            cilk_for (int i = 1; i <= nbNodes; i++) {
+        #endif
     #endif
         int curNode = i;
         ela_invert_prec_ (&dimNode, &nbNodes, nodeToNodeRow, nodeToNodeColumn,
                           prec, &error, checkBounds, &curNode);
-	}
+    }
 }
 
 // Create preconditioner for laplacian operator
@@ -80,15 +91,20 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
         //#pragma omp parallel for
     	cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
-    	cilk_for (int i = 0; i < nbNodes; i++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
+        #else
+    	    cilk_for (int i = 0; i < nbNodes; i++) {
+        #endif
     #endif
-		for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
-			if (nodeToNodeColumn[j]-1 == i) {
-				prec[i] = nodeToNodeValue[j];
-				break;
-			}
-		}
-	}
+        for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
+    	    if (nodeToNodeColumn[j]-1 == i) {
+    		    prec[i] = nodeToNodeValue[j];
+    		    break;
+    	    }
+        }
+    }
 
 	// MPI communications
 	lap_comm_mpi_ (&nbNodes, prec, &nbBlocks, buffer, &nbIntf, &nbIntfNodes,
@@ -101,10 +117,15 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
         //#pragma omp parallel for
     	cilk_for (int i = 0; i < nbNodes; i++) {
     #elif DC
-    	cilk_for (int i = 0; i < nbNodes; i++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes; i++) {
+        #else
+    	    cilk_for (int i = 0; i < nbNodes; i++) {
+        #endif
     #endif
-		prec[i] = 1.0 / prec[i];
-	}
+		    prec[i] = 1.0 / prec[i];
+	    }
 }
 
 // Call the appropriate function to create the preconditioner
@@ -121,7 +142,12 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
         //#pragma omp parallel for
         cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
     #elif DC
-        cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
+        #else
+            cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
+        #endif
     #endif
 
     if (operatorID == 0) {

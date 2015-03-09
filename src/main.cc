@@ -34,7 +34,7 @@ extern "C" {
 }
 
 // Global variables
-string meshName, operatorName;
+string meshName, operatorName, dataPath = "/home/lthebault/Dassault/DC_Data/";
 int *colorToElem = nullptr;
 int nbTotalColors;
 //int MAX_ELEM_PER_PART = strtol (getenv ("elemPerPart"), nullptr, 0);
