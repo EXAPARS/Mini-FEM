@@ -6,10 +6,10 @@ DC_PATH="$HOME/Dassault/DC"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
-METIS_PATH="/home/lthebault/Programs/METIS"
+METIS_PATH="$HOME/Programs/METIS"
 METIS_INCLUDE="$METIS_PATH/include"
 METIS_LIBRARIES="$METIS_PATH/lib/libmetis.a"
-CILKVIEW_INCLUDE="/home/lthebaul/Programs/CilkTools/include/cilktools"
+CILKVIEW_INCLUDE="$HOME/Programs/CilkTools/include/cilktools"
 
 # Case insensitive comparisons
 shopt -s nocasematch
