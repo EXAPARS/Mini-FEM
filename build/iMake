@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Libraries path
-DC_PATH="$HOME/lthebaul/nath/DC_lib"
+DC_PATH="$HOME/DC_lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
@@ -113,7 +113,7 @@ if [[ $VERSION == "dc" ]] && [[ $OPENMP == 1 ]] && [[ $CILK == 1 ]]; then
 fi
 # Obligation to specify Cilk or OpenMP
 if [[ $VERSION == "dc" ]] && [[ $OPENMP == 0 ]] && [[ $CILK == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify ooooo the multithreading library (Cilk or OpenMP).\
+    echo -e "\\033[1;31mPlease specify the multithreading library (Cilk or OpenMP).\
              \\033[0;39m"
     exit
 fi
