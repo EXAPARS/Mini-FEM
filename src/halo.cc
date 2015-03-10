@@ -23,7 +23,7 @@
 // Halo exchange between MPI domains (only for elasticity operator)
 void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
                     int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
-                    int mpiRank)
+                    int operatorID, int mpiRank)
 {
     // Initialize communication buffers
     double *bufferSend = new double [nbIntfNodes*operatorDim];
@@ -43,13 +43,29 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
 
     // Buffering local data
     node2 = 0;
-    for (int i = 0; i < nbIntf; i++) {
-        node1 = node2;
-        node2 = intfIndex[i+1];
-        for (int j = node1; j < node2; j++) {
-            for (int k = 0; k < operatorDim; k++) {
-                int tmpNode = intfNodes[j] - 1;
-                bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+    // Laplacian operator
+    if (operatorID = 0) {
+        for (int i = 0; i < nbIntf; i++) {
+            node1 = node2;
+            node2 = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    bufferSend[j*operatorDim+k] = prec[k*operatorDim+tmpNode];
+                }
+            }
+        }
+    }
+    // Elasticity operator
+    else {
+        for (int i = 0; i < nbIntf; i++) {
+            node1 = node2;
+            node2 = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                }
             }
         }
     }
@@ -73,13 +89,29 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
 
     // Assembling local and incoming data
     node2 = 0;
-    for (int i = 0; i < nbIntf; i++) {
-        node1  = node2;
-        node2  = intfIndex[i+1];
-        for (int j = node1; j < node2; j++) {
-            for (int k = 0; k < operatorDim; k++) {
-                int tmpNode = intfNodes[j] - 1;
-                prec[tmpNode*operatorDim+k] += bufferRecv[j*operatorDim+k];
+    // Laplacian operator
+    if (operatorID = 0) {
+        for (int i = 0; i < nbIntf; i++) {
+            node1  = node2;
+            node2  = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    prec[k*operatorDim+tmpNode] += bufferRecv[j*operatorDim+k];
+                }
+            }
+        }
+    }
+    // Elasticity operator
+    else {
+        for (int i = 0; i < nbIntf; i++) {
+            node1  = node2;
+            node2  = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    prec[tmpNode*operatorDim+k] += bufferRecv[j*operatorDim+k];
+                }
             }
         }
     }

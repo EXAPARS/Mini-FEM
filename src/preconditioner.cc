@@ -22,13 +22,12 @@
 
 // Create preconditioner for elasticity operator
 void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
-                         int *nodeToNodeRow, int *nodeToNodeColumn,
-                         int *intfIndex, int *intfNodes, int *neighborList,
-                         int *checkBounds, int nbNodes, int nbBlocks,
-                         int nbIntf, int nbIntfNodes, int mpiRank)
+                         int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
+                         int *intfNodes, int *neighborList, int *checkBounds,
+                         int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
+                         int operatorDim, int operatorID, int mpiRank)
 {
 	// Copy matrix diagonal into preconditioner
-    int operatorDim = DIM_NODE * DIM_NODE;
     #ifdef REF
         for (int i = 0; i < nbNodes; i++) {
     #elif COLORING
@@ -53,17 +52,13 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     }
 
     // MPI communications
-    int dimNode = DIM_NODE;
-//    ela_comm_mpi_ (&dimNode, &nbNodes, prec, &nbBlocks, buffer, &nbIntf,
-//                   &nbIntfNodes, neighborList, intfIndex, intfNodes);
     if (nbBlocks > 1) {
         halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
-                       nbIntfNodes, operatorDim, mpiRank);
+                       nbIntfNodes, operatorDim, operatorID, mpiRank);
     }
 
     // Inversion of preconditioner
-    int error;
-
+    int dimNode = DIM_NODE, error;
     #ifdef REF
     	for (int i = 1; i <= nbNodes; i++) {
     #elif COLORING
@@ -87,7 +82,8 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
                          int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                          int *intfNodes, int *neighborList, int nbNodes, int nbBlocks,
-                         int nbIntf, int nbIntfNodes, int mpiRank)
+                         int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
+                         int mpiRank)
 {
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
@@ -112,8 +108,10 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
     }
 
 	// MPI communications
-	lap_comm_mpi_ (&nbNodes, prec, &nbBlocks, buffer, &nbIntf, &nbIntfNodes,
-                   neighborList, intfIndex, intfNodes);
+    if (nbBlocks > 1) {
+        halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
+                       nbIntfNodes, operatorDim, operatorID, mpiRank);
+    }
 
 	// Inversion of preconditioner
     #ifdef REF
@@ -157,14 +155,14 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
 
     if (operatorID == 0) {
         preconditioner_lap (prec, buffer, nodeToNodeValue, nodeToNodeRow,
-                            nodeToNodeColumn, intfIndex, intfNodes,
-                            neighborList, nbNodes, nbBlocks, nbIntf,
-                            nbIntfNodes, mpiRank);
+                            nodeToNodeColumn, intfIndex, intfNodes, neighborList,
+                            nbNodes, nbBlocks, nbIntf, nbIntfNodes, operatorDim,
+                            operatorID, mpiRank);
     }
     else {
         preconditioner_ela (prec, buffer, nodeToNodeValue, nodeToNodeRow,
-                            nodeToNodeColumn, intfIndex, intfNodes,
-                            neighborList, checkBounds, nbNodes, nbBlocks,
-                            nbIntf, nbIntfNodes, mpiRank);
+                            nodeToNodeColumn, intfIndex, intfNodes, neighborList,
+                            checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
+                            operatorDim, operatorID, mpiRank);
     }
 }

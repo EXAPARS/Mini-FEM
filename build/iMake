@@ -2,7 +2,7 @@
 
 # Libraries path
 DATA_PATH="$HOME/Dassault/DC_Data"
-DC_PATH="$HOME/Dassault/DC"
+DC_PATH="$HOME/Dassault/DC-lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"

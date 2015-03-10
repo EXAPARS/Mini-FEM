@@ -1,20 +1,3 @@
-      subroutine ela_comm_mpi(nspa,nnt,prec,nblk,pbuf,nit,lni,npara,    &
-     &                        inni,nni)
-
-      implicit   none
-      integer    nspa,nnt,nit,lni,npara,inni,nni,ndof,nblk
-      real*8     prec,pbuf
-      dimension  npara(nit,3),inni(nit+1),nni(lni)
-      dimension  prec(nspa,nspa,nnt),pbuf(*)
-
-      if(nblk .gt. 1) then
-       ndof=nspa*nspa
-       call SPdOPE(nit,lni,npara,inni,nni,ndof,nnt,ndof,prec,pbuf,'sum')
-      endif
-
-      return
-      end
-
 ! Separation of prec inversion from ELASCLPR (LT)
       recursive subroutine ela_invert_prec(nspa,nnt,innv,nnv,prec,ier,  &
      &                                     markf,i)
