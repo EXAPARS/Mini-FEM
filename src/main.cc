@@ -1,20 +1,23 @@
 /*  Copyright 2014 - UVSQ, Dassault Aviation
     Authors list: Loïc Thébault, Eric Petit
 
-    This file is part of MiniFEM.
+    This file is part of Mini-FEM.
 
-    MiniFEM is free software: you can redistribute it and/or modify it under the terms
+    Mini-FEM is free software: you can redistribute it and/or modify it under the terms
     of the GNU Lesser General Public License as published by the Free Software
     Foundation, either version 3 of the License, or (at your option) any later version.
 
-    MiniFEM is distributed in the hope that it will be useful, but WITHOUT ANY
+    Mini-FEM is distributed in the hope that it will be useful, but WITHOUT ANY
     WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
     PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License along with
-    MiniFEM. If not, see <http://www.gnu.org/licenses/>. */
+    Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <mpi.h>
+#ifdef XMPI
+    #include <mpi.h>
+#elif GASPI
+#endif
 #include <iostream>
 #include <iomanip>
 #include <DC.h>
@@ -121,13 +124,13 @@ int main (int argCount, char **argValue)
     // Get the input data from DefMesh
 	if (rank == 0) {
         cout << "Reading input data...                ";
-        t1 = MPI_Wtime ();
+        t1 = DC_get_time ();
     }
 	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
                      &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
-        t2 = MPI_Wtime ();
+        t2 = DC_get_time ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
     }
 
@@ -148,11 +151,11 @@ int main (int argCount, char **argValue)
         #ifdef TREE_CREATION
             if (rank == 0) {
                 cout << "Creation of the D&C tree...          ";
-                t1 = MPI_Wtime ();
+                t1 = DC_get_time ();
             }
             DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes);
             if (rank == 0) {
-                t2 = MPI_Wtime ();
+                t2 = DC_get_time ();
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
 
@@ -160,11 +163,11 @@ int main (int argCount, char **argValue)
         #else
             if (rank == 0) {
                 cout << "Reading the D&C tree...              ";
-                t1 = MPI_Wtime ();
+                t1 = DC_get_time ();
             }
             DC_read_tree (treePath, nbElem, nbNodes);
             if (rank == 0) {
-                t2 = MPI_Wtime ();
+                t2 = DC_get_time ();
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
         #endif
@@ -172,7 +175,7 @@ int main (int argCount, char **argValue)
         // Apply permutations
         if (rank == 0) {
             cout << "Applying permutation...              ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         DC_permute_double_2d_array (coord, nbNodes, DIM_NODE);
         #ifndef TREE_CREATION
@@ -183,7 +186,7 @@ int main (int argCount, char **argValue)
         DC_renumber_int_array (dispList, nbDispNodes, true);
         DC_permute_int_1d_array (boundNodesCode, nbNodes);
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
 
@@ -193,24 +196,24 @@ int main (int argCount, char **argValue)
         // Create the coloring
         if (rank == 0) {
             cout << "Coloring of the mesh...              ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         int *colorPerm = new int [nbElem];
         coloring_creation (elemToNode, colorPerm, nbElem, nbNodes);
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
 
         // Apply the element permutation
         if (rank == 0) {
             cout << "Applying permutation...              ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         DC_permute_int_2d_array (elemToNode, colorPerm, nbElem, DIM_ELEM, 0);
         delete[] colorPerm;
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
     #endif
@@ -219,7 +222,7 @@ int main (int argCount, char **argValue)
     // Create the CSR matrix
 	if (rank == 0) {
 	    cout << "Creating CSR matrix...               ";
-	    t1 = MPI_Wtime ();
+	    t1 = DC_get_time ();
     }
     nodeToElem.index = new int [nbNodes + 1];
     nodeToElem.value = new int [nbElem * DIM_ELEM];
@@ -230,7 +233,7 @@ int main (int argCount, char **argValue)
                        nbNodes);
     delete[] nodeToElem.value, delete[] nodeToElem.index;
 	if (rank == 0) {
-        t2 = MPI_Wtime ();
+        t2 = DC_get_time ();
     	cout << "done  (" << t2 - t1 << " seconds)\n";
     }
 
@@ -238,18 +241,18 @@ int main (int argCount, char **argValue)
     #if defined (DC) && defined (TREE_CREATION)
         if (rank == 0) {
             cout << "Finalizing the D&C tree...           ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         DC_finalize_tree (nodeToNodeRow, elemToNode, nbNodes);
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
             cout << "done  (" << t2 - t1 << " seconds)\n"
                  << "Storing the D&C tree...              ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         DC_store_tree (treePath, nbElem, nbNodes);
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
             cout << "done  (" << t2 - t1 << " seconds)\n";
         }
     #endif
@@ -258,13 +261,13 @@ int main (int argCount, char **argValue)
     #ifdef OPTIMIZED
         if (rank == 0) {
             cout << "Computing edges index...             ";
-            t1 = MPI_Wtime ();
+            t1 = DC_get_time ();
         }
         elemToEdge = new int [nbElem * VALUES_PER_ELEM];
         create_elemToEdge (nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
                           nbElem);
         if (rank == 0) {
-            t2 = MPI_Wtime ();
+            t2 = DC_get_time ();
             cout << "done  (" << t2 - t1 << " seconds)\n";
         }
     #endif
@@ -272,7 +275,7 @@ int main (int argCount, char **argValue)
     // Compute the boundary conditions
 	if (rank == 0) {
 	    cout << "Computing boundary conditions...     ";
-	    t1 = MPI_Wtime ();
+	    t1 = DC_get_time ();
     }
     int dimNode = DIM_NODE;
 	boundNodesList = new int [nbBoundNodes];
@@ -284,7 +287,7 @@ int main (int argCount, char **argValue)
 
     // Main loop with assembly, solver & update
     if (rank == 0) {
-        t2 = MPI_Wtime ();
+        t2 = DC_get_time ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
         cout << "\nMain FEM loop...\n";
     }
