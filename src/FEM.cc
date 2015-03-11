@@ -49,14 +49,14 @@ double compute_double_norm (double *tab, int size)
 
 // Check if current assembly results match to the reference version
 void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
-                     int operatorDim, int nbBlocks, int mpiRank)
+                     int operatorDim, int nbBlocks, int rank)
 {
 	double refMatrixNorm, refPrecNorm, MatrixNorm, precNorm;
-	read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, mpiRank);
+	read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, rank);
 	MatrixNorm = compute_double_norm (nodeToNodeValue, nbEdges*operatorDim);
 	precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
 
-    if (mpiRank == 0) {
+    if (rank == 0) {
 	    cout << "Matrix -> reference norm : " << refMatrixNorm << endl
 	    	 << "            current norm : " << MatrixNorm << endl
 	    	 << "              difference : " << abs (refMatrixNorm-MatrixNorm)
@@ -74,7 +74,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *elemToEdge, int *intfIndex, int *intfNodes,
                int *neighborList, int *checkBounds, int nbElem, int nbNodes,
                int nbEdges, int nbIntf, int nbIntfNodes, int nbIter,
-               int nbBlocks, int mpiRank, int operatorDim, int operatorID)
+               int nbBlocks, int rank, int operatorDim, int operatorID)
 {
     double *buffer = new double [max (2*nbIntfNodes*DIM_NODE*operatorDim, 1)];
 
@@ -108,7 +108,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         localElapsed = p2 - p1;
         MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
                     MPI_COMM_WORLD);
-		if (mpiRank == 0) {
+		if (rank == 0) {
 	        cout << iter << ". Matrix assembly         : " << globalElapsed
                  << " cycles\n";
 		}
@@ -118,12 +118,12 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         preconditioner (prec, buffer, nodeToNodeValue, nodeToNodeRow,
                         nodeToNodeColumn, intfIndex, intfNodes, neighborList,
                         checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
-                        operatorDim, operatorID, mpiRank);
+                        operatorDim, operatorID, rank);
         p2 = DC_get_cycles ();
         localElapsed = p2 - p1;
         MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
                     MPI_COMM_WORLD);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
             if (iter != nbIter) cout << endl;
         }
@@ -136,7 +136,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                               CV_REPORT_WRITE_TO_LOG);
     #elif PAPI
         PAPI_stop (event_set, &papiL3TCM);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "\nPAPI counters\n  L3 cache misses : " << papiL3TCM << "\n\n";
         }
     #elif INTEL_PCM

@@ -7,7 +7,6 @@ DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
 METIS_PATH="$HOME/Programs/METIS"
-METIS_INCLUDE="$METIS_PATH/include"
 METIS_LIBRARIES="$METIS_PATH/lib/libmetis.a"
 CILKVIEW_INCLUDE="$HOME/Programs/CilkTools/include/cilktools"
 
@@ -16,14 +15,17 @@ shopt -s nocasematch
 
 # Check number of arguments
 if [ $# -eq 0 ]; then
-    echo -e "\\033[1;31mPlease specify the code version (Ref, DC, Hybrid, Coloring) \
-             \\033[0;39m"
+    echo -e "\\033[1;31mPlease specify:"
+    echo -e " - The code version (Ref, DC, Hybrid, or Coloring)"
+    echo -e " - The distributed memory library (MPI or GASPI)"
+    echo -e " - The shared memory runtime (Cilk or OpenMP) \\033[0;39m"
     exit
 fi
 
 # Parse arguments
+DISTRI=0
+SHARED=0
 VERSION=0
-HYBRID=0
 ARCHI=0
 TREE=0
 STATS=0
@@ -34,9 +36,6 @@ MATT=0
 PAPI=0
 VTUNE=0
 CILKVIEW=0
-OPENMP=0
-CILK=0
-REF=0
 
 for i in $@; do
 	if [[ $i == "clean" ]]; then
@@ -49,18 +48,22 @@ for i in $@; do
               external_files.mod mod_qvddump.mod 2> /dev/null
 		echo -e "\\033[1;32mBuild & bin directories have been cleaned up\\033[0;39m"
 		exit
+    elif [[ $i == "mpi" ]]; then
+        DISTRI="XMPI"
+    elif [[ $i == "gaspi" ]]; then
+        DISTRI="GASPI"
+    elif [[ $i == "cilk" ]]; then
+        SHARED="CILK"
+    elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
+        SHARED="OMP"
 	elif [[ $i == "ref" ]]; then
 		VERSION="REF"
-        REF=1
-        CILK=1
 	elif [[ $i == "coloring" ]]; then
 		VERSION="COLORING"
-        OPENMP=1
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
 	elif [[ $i == "hybrid" ]]; then
-        VERSION="DC"
-	    HYBRID=1
+        VERSION="HYBRID"
 	elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
 	elif [[ $i == "avx" ]]; then
@@ -73,66 +76,69 @@ for i in $@; do
         STATS=1
 	elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
 		OPTIMIZED=1
-	elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
-		OPENMP=1
 	elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
 		DEBUG=1
 	elif [[ $i == "verbose" ]]; then
 		VERBOSE=1
 	elif [[ $i == "matt" ]]; then
-		MATT=1
-	        DEBUG=1
+        MATT=1
+        DEBUG=1
 	elif [[ $i == "papi" ]]; then
 		PAPI=1
 	elif [[ $i == "vtune" ]]; then
-		VTUNE=1
-        	DEBUG=1
+        VTUNE=1
+        DEBUG=1
 	elif [[ $i == "cilkview" ]]; then
 		CILKVIEW=1
-    elif [[ $i == "cilk" ]]; then
-        CILK=1
 	else
 		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
 	fi
 done
 
 # Check arguments
+if [[ $DISTRI != "xmpi" ]] && [[ $DISTRI != "gaspi" ]]; then
+    echo -e "\\033[1;31mPlease specify the distributed memory library (MPI or GASPI) \
+             \\033[0;39m"
+    exit
+fi
+if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
+    echo -e "\\033[1;31mPlease specify the shared memory runtime (Cilk or OpenMP) \
+             \\033[0;39m"
+    exit
+fi
 if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] &&
-   [[ $VERSION != "dc" ]]; then
+   [[ $VERSION != "dc" ]]  && [[ $VERSION != "hybrid" ]]; then
     echo -e "\\033[1;31mPlease specify the code version (Ref, DC, Hybrid, Coloring) \
              \\033[0;39m"
     exit
 fi
-if [[ $HYBRID == 1 ]] && [[ $ARCHI == 0 ]]; then
+if [[ $VERSION == "hybrid" ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
 if [ ! -d "$DATA_PATH" ]; then
-    echo -e "\\033[1;31mIncorrect path to the D&C data\\033[0;39m"
+    echo -e "\\033[1;31mIncorrect path to D&C data\\033[0;39m"
     exit
 fi
 if [ ! -d "$DC_PATH" ]; then
     echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
-
-# Obligation to choose between Cilk and OpenMP
-if [[ $VERSION == "dc" ]] && [[ $OPENMP == 1 ]] && [[ $CILK == 1 ]]; then
-    echo -e "\\033[1;31mPlease choose between Cilk and OpenMP.\\033[0;39m"
-    exit
-fi
-# Obligation to specify Cilk or OpenMP
-if [[ $VERSION == "dc" ]] && [[ $OPENMP == 0 ]] && [[ $CILK == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify the multithreading library (Cilk or OpenMP).\
-             \\033[0;39m"
+if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
+    echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
 
 # Configure D&C library
-DC_ARGUMENTS=""
-if [[ $HYBRID == 1 ]]; then
+DC_ARGUMENTS="$DISTRI $SHARED"
+DC_LIBRARIES=$DC_LIBRARIES\_$DISTRI\_$SHARED
+if [[ $VERSION == "hybrid" ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_Hybrid_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS hybrid $ARCHI"
+fi
+if [[ $ARCHI == "mic" ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_$ARCHI
+    DC_ARGUMENTS="$DC_ARGUMENTS $ARCHI"
 fi
 if [[ $TREE == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_TreeCreation
@@ -148,20 +154,6 @@ if [[ $DEBUG == 1 ]]; then
 fi
 if [[ $VERBOSE == 1 ]]; then
     DC_ARGUMENTS="$DC_ARGUMENTS verbose"
-fi
-if [[ $OPENMP == 1 ]]; then
-    DC_LIBRARIES=$DC_LIBRARIES\_OpenMP
-    DC_ARGUMENTS="$DC_ARGUMENTS omp"
-fi
-if [[ $CILK == 1 ]] && [[ $REF == 0 ]]; then
-    DC_LIBRARIES=$DC_LIBRARIES\_Cilk
-    DC_ARGUMENTS="$DC_ARGUMENTS cilk"
-fi
-if [[ $CILK == 1 ]] && [[ $REF == 1 ]]; then
-    DC_ARGUMENTS="$DC_ARGUMENTS cilk"
-fi
-if [[ $VERSION == "ref" ]]; then
-    DC_ARGUMENTS="$DC_ARGUMENTS ref"
 fi
 DC_LIBRARIES=$DC_LIBRARIES.so
 
@@ -184,43 +176,35 @@ if [[ $ARCHI == "mic" ]]; then
 
     if [[ $TREE == 1 ]]; then
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DDATA_PATH=$DATA_PATH \
-              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
+              -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
               -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
-              -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
-              -DOPTIMIZED=$OPTIMIZED -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
+              -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     else
 	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DDATA_PATH=$DATA_PATH \
-              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
-              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DVERSION=$VERSION \
-              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
-              -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \
-              -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              -DCILK=$CILK -DREF=$REF \
+              -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
+              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE $DDISTRI=$DISTRI -DSHARED=$SHARED \
+              -DVERSION=$VERSION -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI \
+              -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
               . -G "Unix Makefiles"
     fi
 else
     if [[ $TREE == 1 ]]; then
-        cmake -DDATA_PATH=$DATA_PATH \
-              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
+        cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
               -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
-              -DVERSION=$VERSION -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE \
-              -DOPTIMIZED=$OPTIMIZED -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
+              -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
               -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              -DCILK=$CILK -DREF=$REF \
               . -G "Unix Makefiles"
     else
-        cmake -DDATA_PATH=$DATA_PATH \
-              -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
-              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DVERSION=$VERSION \
-              -DHYBRID=$HYBRID -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
-              -DOMP=$OPENMP -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \
-              -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              -DCILK=$CILK -DREF=$REF \
+        cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
+              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
+              -DVERSION=$VERSION -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
+              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI \
+              -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
               . -G "Unix Makefiles"
     fi
 fi

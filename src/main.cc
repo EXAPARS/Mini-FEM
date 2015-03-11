@@ -48,7 +48,7 @@ void help () {
 }
 
 // Check arguments (test case, operator & number of iterations)
-void check_args (int argCount, char **argValue, int *nbIter, int mpiRank)
+void check_args (int argCount, char **argValue, int *nbIter, int rank)
 {
     if (argCount < 4) {
         help ();
@@ -56,20 +56,20 @@ void check_args (int argCount, char **argValue, int *nbIter, int mpiRank)
     }
     meshName = argValue[1];
     if (meshName.compare ("LM6") && meshName.compare ("EIB") &&
-        meshName.compare ("FGN") && mpiRank == 0) {
+        meshName.compare ("FGN") && rank == 0) {
 		cerr << "Incorrect argument \"" << meshName << "\".\n";
 		help ();
 		exit (EXIT_FAILURE);
 	}
 	operatorName = argValue[2];
 	if (operatorName.compare ("lap") && operatorName.compare ("ela") &&
-        mpiRank == 0) {
+        rank == 0) {
 		cerr << "Incorrect argument \"" << operatorName << "\".\n";
 		help ();
 		exit (EXIT_FAILURE);
 	}
 	*nbIter = strtol (argValue[3], nullptr, 0);
-	if (*nbIter < 1 && mpiRank == 0) {
+	if (*nbIter < 1 && rank == 0) {
 		cerr << "Number of iterations must be at least 1.\n";
 		exit (EXIT_FAILURE);
 	}
@@ -77,16 +77,19 @@ void check_args (int argCount, char **argValue, int *nbIter, int mpiRank)
 
 int main (int argCount, char **argValue)
 {
-	// MPI initialization
-	MPI_Init (&argCount, &argValue);
-	int nbBlocks, mpiRank;
-	MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
-	MPI_Comm_rank (MPI_COMM_WORLD, &mpiRank);
+	// Process initialization
+	int nbBlocks, rank;
+    #ifdef XMPI
+	    MPI_Init (&argCount, &argValue);
+	    MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
+	    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+    #elif GASPI
+    #endif
 
 	// Arguments initialization
 	int nbIter;
-    check_args (argCount, argValue, &nbIter, mpiRank);
-	if (mpiRank == 0) {
+    check_args (argCount, argValue, &nbIter, rank);
+	if (rank == 0) {
         cout << "\t\t* Mini-App *\n\n"
         	 << "Test case              : \"" << meshName << "\"\n"
         	 << "Operator               : \"" << operatorName << "\"\n"
@@ -116,14 +119,14 @@ int main (int argCount, char **argValue)
     }
 
     // Get the input data from DefMesh
-	if (mpiRank == 0) {
+	if (rank == 0) {
         cout << "Reading input data...                ";
         t1 = MPI_Wtime ();
     }
 	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
                      &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
-                     &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, mpiRank);
-    if (mpiRank == 0) {
+                     &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
+    if (rank == 0) {
         t2 = MPI_Wtime ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
     }
@@ -139,35 +142,35 @@ int main (int argCount, char **argValue)
         #endif
                               + to_string ((long long)MAX_ELEM_PER_PART) + "_"
                               + to_string ((long long)nbBlocks) + "_"
-                              + to_string ((long long)mpiRank);
+                              + to_string ((long long)rank);
 
         // Creation of the D&C tree and permutations
         #ifdef TREE_CREATION
-            if (mpiRank == 0) {
+            if (rank == 0) {
                 cout << "Creation of the D&C tree...          ";
                 t1 = MPI_Wtime ();
             }
             DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes);
-            if (mpiRank == 0) {
+            if (rank == 0) {
                 t2 = MPI_Wtime ();
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
 
         // Reading of the D&C tree and permutations
         #else
-            if (mpiRank == 0) {
+            if (rank == 0) {
                 cout << "Reading the D&C tree...              ";
                 t1 = MPI_Wtime ();
             }
             DC_read_tree (treePath, nbElem, nbNodes);
-            if (mpiRank == 0) {
+            if (rank == 0) {
                 t2 = MPI_Wtime ();
             	cout << "done  (" << t2 - t1 << " seconds)\n";
             }
         #endif
 
         // Apply permutations
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "Applying permutation...              ";
             t1 = MPI_Wtime ();
         }
@@ -179,7 +182,7 @@ int main (int argCount, char **argValue)
         DC_renumber_int_array (intfNodes, nbIntfNodes, true);
         DC_renumber_int_array (dispList, nbDispNodes, true);
         DC_permute_int_1d_array (boundNodesCode, nbNodes);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
@@ -188,25 +191,25 @@ int main (int argCount, char **argValue)
     #elif COLORING
 
         // Create the coloring
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "Coloring of the mesh...              ";
             t1 = MPI_Wtime ();
         }
         int *colorPerm = new int [nbElem];
         coloring_creation (elemToNode, colorPerm, nbElem, nbNodes);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
 
         // Apply the element permutation
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "Applying permutation...              ";
             t1 = MPI_Wtime ();
         }
         DC_permute_int_2d_array (elemToNode, colorPerm, nbElem, DIM_ELEM, 0);
         delete[] colorPerm;
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
@@ -214,7 +217,7 @@ int main (int argCount, char **argValue)
 	delete[] dispList;
 
     // Create the CSR matrix
-	if (mpiRank == 0) {
+	if (rank == 0) {
 	    cout << "Creating CSR matrix...               ";
 	    t1 = MPI_Wtime ();
     }
@@ -226,26 +229,26 @@ int main (int argCount, char **argValue)
     create_nodeToNode (nodeToNodeRow, nodeToNodeColumn, nodeToElem, elemToNode,
                        nbNodes);
     delete[] nodeToElem.value, delete[] nodeToElem.index;
-	if (mpiRank == 0) {
+	if (rank == 0) {
         t2 = MPI_Wtime ();
     	cout << "done  (" << t2 - t1 << " seconds)\n";
     }
 
     // Finalize and store the D&C tree
     #if defined (DC) && defined (TREE_CREATION)
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "Finalizing the D&C tree...           ";
             t1 = MPI_Wtime ();
         }
         DC_finalize_tree (nodeToNodeRow, elemToNode, nbNodes);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
             cout << "done  (" << t2 - t1 << " seconds)\n"
                  << "Storing the D&C tree...              ";
             t1 = MPI_Wtime ();
         }
         DC_store_tree (treePath, nbElem, nbNodes);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
             cout << "done  (" << t2 - t1 << " seconds)\n";
         }
@@ -253,21 +256,21 @@ int main (int argCount, char **argValue)
 
     // Compute the index of each edge of each element
     #ifdef OPTIMIZED
-        if (mpiRank == 0) {
+        if (rank == 0) {
             cout << "Computing edges index...             ";
             t1 = MPI_Wtime ();
         }
         elemToEdge = new int [nbElem * VALUES_PER_ELEM];
         create_elemToEdge (nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
                           nbElem);
-        if (mpiRank == 0) {
+        if (rank == 0) {
             t2 = MPI_Wtime ();
             cout << "done  (" << t2 - t1 << " seconds)\n";
         }
     #endif
 
     // Compute the boundary conditions
-	if (mpiRank == 0) {
+	if (rank == 0) {
 	    cout << "Computing boundary conditions...     ";
 	    t1 = MPI_Wtime ();
     }
@@ -280,7 +283,7 @@ int main (int argCount, char **argValue)
 	delete[] boundNodesList, delete[] boundNodesCode;
 
     // Main loop with assembly, solver & update
-    if (mpiRank == 0) {
+    if (rank == 0) {
         t2 = MPI_Wtime ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
         cout << "\nMain FEM loop...\n";
@@ -290,7 +293,7 @@ int main (int argCount, char **argValue)
 	FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
               elemToNode, elemToEdge, intfIndex, intfNodes, neighborList,
               checkBounds, nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes,
-              nbIter, nbBlocks, mpiRank, operatorDim, operatorID);
+              nbIter, nbBlocks, rank, operatorDim, operatorID);
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
     delete[] neighborList, delete[] intfNodes, delete[] intfIndex;
     delete[] coord, delete[] elemToNode;
@@ -299,11 +302,11 @@ int main (int argCount, char **argValue)
     #endif
 
     // Check results on nodeToNodeValue & prec arrays
-    if (mpiRank == 0) cout << "done\n\nChecking results...\n" << setprecision (3);
+    if (rank == 0) cout << "done\n\nChecking results...\n" << setprecision (3);
     check_assembly (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim,
-                    nbBlocks, mpiRank);
+                    nbBlocks, rank);
     delete[] prec, delete[] nodeToNodeValue;
-    if (mpiRank == 0) cout << "done\n";
+    if (rank == 0) cout << "done\n";
 
 	MPI_Finalize ();
 	return EXIT_SUCCESS;

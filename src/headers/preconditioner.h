@@ -28,20 +28,20 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
                          int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                          int *intfNodes, int *neighborList, int *checkBounds,
                          int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                         int operatorDim, int operatorID, int mpiRank);
+                         int operatorDim, int operatorID, int rank);
 
 // Create preconditioner for laplacian operator
 void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
                          int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                          int *intfNodes, int *neighborList, int nbNodes, int nbBlocks,
                          int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-                         int mpiRank);
+                         int rank);
 
 // Call the appropriate function to create the preconditioner
 void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
                      int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                      int *intfNodes, int *neighborList, int *checkBounds,
                      int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                     int operatorDim, int operatorID, int mpiRank);
+                     int operatorDim, int operatorID, int rank);
 
 #endif

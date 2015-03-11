@@ -23,7 +23,7 @@
 // Halo exchange between MPI domains (only for elasticity operator)
 void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
                     int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
-                    int operatorID, int mpiRank)
+                    int operatorID, int rank)
 {
     // Initialize communication buffers
     double *bufferSend = new double [nbIntfNodes*operatorDim];
@@ -77,7 +77,7 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
         node2 = intfIndex[i+1];
         size  = (node2 - node1) * operatorDim;
         dest  = neighborList[i] - 1;
-        tag   = mpiRank + 101;
+        tag   = rank + 101;
         MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION, dest,
                   tag, MPI_COMM_WORLD);
     }

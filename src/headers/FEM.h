@@ -22,7 +22,7 @@ double compute_double_norm (double *tab, int size);
 
 // Check if current assembly results match to the reference version
 void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges,
-                     int nbNodes, int operatorDim, int nbBlocks, int mpiRank);
+                     int nbNodes, int operatorDim, int nbBlocks, int rank);
 
 // Main loop iterating over the 3 main steps of FEM applications
 void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
@@ -30,6 +30,6 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *elemToEdge, int *intfIndex, int *intfNodes,
                int *neighborList, int *checkBounds, int nbElem, int nbNodes,
                int nbEdges, int nbIntf, int nbIntfNodes, int nbIter,
-               int nbBlocks, int mpiRank, int operatorDim, int operatorID);
+               int nbBlocks, int rank, int operatorDim, int operatorID);
 
 #endif

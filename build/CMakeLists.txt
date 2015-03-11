@@ -7,21 +7,27 @@ set (CMAKE_CXX_COMPILER icpc)
 set (CMAKE_C_COMPILER icc)
 
 # Project
-project (MiniFEM)
+project (Mini-FEM)
 enable_language (Fortran)
-find_package (MPI)
+if (${DISTRI} STREQUAL "XMPI")
+    find_package (MPI)
+endif (${DISTRI} STREQUAL "XMPI")
 
 # Flags
-set (flags "-O2 -mkl:sequential -D${VERSION} -DDATA_PATH=\\\"${DATA_PATH}\\\"")
-if (${HYBRID})
-    add_definitions (-DHYBRID)
-endif (${HYBRID})
+set (flags "-O2 -mkl:sequential -DDATA_PATH=\\\"${DATA_PATH}\\\"")
+add_definitions (-D${DISTRI} -D${SHARED} -D${VERSION})
+if (${SHARED} STREQUAL "OMP")
+	set (flags "${flags} -openmp")
+endif (${SHARED} STREQUAL "OMP")
 if (${ARCHI} STREQUAL "SSE")
-    set (flags "${flags} -msse -DVEC_SIZE=2")
+    set (flags "${flags} -msse")
+    add_definitions (-DVEC_SIZE=2)
 elseif (${ARCHI} STREQUAL "AVX")
-    set (flags "${flags} -mavx -DVEC_SIZE=4")
+    set (flags "${flags} -mavx")
+    add_definitions (-DVEC_SIZE=4)
 elseif (${ARCHI} STREQUAL "MIC")
-    set (flags "${flags} -mmic -DVEC_SIZE=8")
+    set (flags "${flags} -mmic")
+    add_definitions (-DVEC_SIZE=8)
 endif (${ARCHI} STREQUAL "SSE")
 if (${TREE})
     add_definitions (-DTREE_CREATION)
@@ -29,10 +35,6 @@ endif (${TREE})
 if (${OPTIMIZED})
 	add_definitions (-DOPTIMIZED)
 endif (${OPTIMIZED})
-if (${OMP})
-	set (flags "${flags} -openmp")
-    add_definitions (-DOMP)
-endif (${OMP})
 if (${DEBUG})
     set (flags "${flags} -g -O0")
 endif (${DEBUG})
@@ -59,70 +61,72 @@ set (CMAKE_EXE_LINKER_FLAGS "${flags} -nofor-main -lstdc++ -lcilkrts")
 
 # Headers
 include_directories (../src/headers)
-include_directories (${MPI_INCLUDE_PATH})
 include_directories (${DC_INCLUDE})
+if (${DISTRI} STREQUAL "XMPI")
+    include_directories (${MPI_INCLUDE_PATH})
+endif (${DISTRI} STREQUAL "XMPI")
 if (${VTUNE})
-	include_directories (${VTUNE_INCLUDE})
+    include_directories (${VTUNE_INCLUDE})
 endif (${VTUNE})
 if (${CILKVIEW})
-	include_directories (${CILKVIEW_INCLUDE})
+    include_directories (${CILKVIEW_INCLUDE})
 endif (${CILKVIEW})
 
 # Sources
 file (GLOB_RECURSE source_list ../src/*)
 
 # Executable
-set (exec miniFEM_${VERSION})
-if (${HYBRID})
-        set (exec ${exec}_Hybrid_${ARCHI})
-endif (${HYBRID})
+set (exec miniFEM_${DISTRI}_${SHARED}_${VERSION})
+if (${VERSION} STREQUAL "HYBRID" OR ${ARCHI} STREQUAL "MIC")
+    set (exec ${exec}_${ARCHI})
+endif (${VERSION} STREQUAL "HYBRID" OR ${ARCHI} STREQUAL "MIC")
 if (${TREE})
-	set (exec ${exec}_TreeCreation)
+    set (exec ${exec}_TreeCreation)
 endif (${TREE})
 if (${OPTIMIZED})
-	set (exec ${exec}_Opti)
+    set (exec ${exec}_Opti)
 endif (${OPTIMIZED})
-if (${OMP})
-	set (exec ${exec}_OpenMP)
-endif (${OMP})
-if (${CILK} AND NOT ${REF})
-    set (exec ${exec}_Cilk)
-endif (${CILK} AND NOT ${REF})
 if (${DEBUG})
-	set (exec ${exec}_Debug)
+    set (exec ${exec}_Debug)
 endif (${DEBUG})
 if (${MATT})
-	set (exec ${exec}_MATT)
+    set (exec ${exec}_MATT)
 endif (${MATT})
 if (${PAPI})
-	set (exec ${exec}_PAPI)
+    set (exec ${exec}_PAPI)
 endif (${PAPI})
 if (${VTUNE})
-	set (exec ${exec}_VTune)
+    set (exec ${exec}_VTune)
 endif (${VTUNE})
 if (${CILKVIEW})
-	set (exec ${exec}_CilkView)
+    set (exec ${exec}_CilkView)
 endif (${CILKVIEW})
 add_executable (
-	${exec}
-	${source_list}
+    ${exec}
+    ${source_list}
 )
 
 # Link
 set_property (TARGET ${exec} PROPERTY LINKER_LANGUAGE Fortran)
+target_link_libraries (
+    ${exec}
+    ${DC_LIBRARIES}
+)
+if (${DISTRI} STREQUAL "XMPI")
+    target_link_libraries (
+        ${exec}
+        ${MPI_LIBRARIES}
+    )
+endif (${DISTRI} STREQUAL "XMPI")
 if (${TREE})
     target_link_libraries (
         ${exec}
-        ${MPI_LIBRARIES}
-        ${DC_LIBRARIES}
         ${METIS_LIBRARIES}
-        ${VTUNE_LIBRARIES}
-    )
-else (${TREE})
-    target_link_libraries (
-        ${exec}
-        ${MPI_LIBRARIES}
-        ${DC_LIBRARIES}
-        ${VTUNE_LIBRARIES}
     )
 endif (${TREE})
+if (${VTUNE})
+    target_link_libraries (
+        ${exec}
+        ${VTUNE_LIBRARIES}
+    )
+endif (${VTUNE})

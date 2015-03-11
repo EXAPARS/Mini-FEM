@@ -25,7 +25,7 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
                          int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                          int *intfNodes, int *neighborList, int *checkBounds,
                          int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                         int operatorDim, int operatorID, int mpiRank)
+                         int operatorDim, int operatorID, int rank)
 {
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
@@ -54,7 +54,7 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     // MPI communications
     if (nbBlocks > 1) {
         halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
-                       nbIntfNodes, operatorDim, operatorID, mpiRank);
+                       nbIntfNodes, operatorDim, operatorID, rank);
     }
 
     // Inversion of preconditioner
@@ -83,7 +83,7 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
                          int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                          int *intfNodes, int *neighborList, int nbNodes, int nbBlocks,
                          int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-                         int mpiRank)
+                         int rank)
 {
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
@@ -110,7 +110,7 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
 	// MPI communications
     if (nbBlocks > 1) {
         halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
-                       nbIntfNodes, operatorDim, operatorID, mpiRank);
+                       nbIntfNodes, operatorDim, operatorID, rank);
     }
 
 	// Inversion of preconditioner
@@ -136,7 +136,7 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
                      int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
                      int *intfNodes, int *neighborList, int *checkBounds,
                      int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                     int operatorDim, int operatorID, int mpiRank)
+                     int operatorDim, int operatorID, int rank)
 {
     // Preconditioner reset
     #ifdef REF
@@ -157,12 +157,12 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
         preconditioner_lap (prec, buffer, nodeToNodeValue, nodeToNodeRow,
                             nodeToNodeColumn, intfIndex, intfNodes, neighborList,
                             nbNodes, nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                            operatorID, mpiRank);
+                            operatorID, rank);
     }
     else {
         preconditioner_ela (prec, buffer, nodeToNodeValue, nodeToNodeRow,
                             nodeToNodeColumn, intfIndex, intfNodes, neighborList,
                             checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
-                            operatorDim, operatorID, mpiRank);
+                            operatorDim, operatorID, rank);
     }
 }

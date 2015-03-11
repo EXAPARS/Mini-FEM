@@ -24,11 +24,11 @@
 
 // Read reference norm of matrix & preconditioner arrays
 void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks,
-                        int mpiRank)
+                        int rank)
 {
 	string fileName = (string)DATA_PATH + "/" + meshName + "/checkings/" + operatorName
                       + "_" + to_string ((long long)nbBlocks) + "_"
-                      + to_string ((long long)mpiRank);
+                      + to_string ((long long)rank);
     ifstream refASM (fileName, ios::in);
     if (!refASM.is_open ()) {
         cerr << "Error: cannot read reference checking: " << fileName << "!\n";
@@ -41,14 +41,14 @@ void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks
 // Store reference norm of matrix & preconditioner arrays 
 void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
                           int *nbNodes, int *operatorDim, int *nbBlocks,
-                          int *mpiRank)
+                          int *rank)
 {
     double refMatrixNorm, refPrecNorm;
     refMatrixNorm = compute_double_norm (refMatrix, (*nbEdges)*(*operatorDim));
     refPrecNorm   = compute_double_norm (refPrec, (*nbNodes)*(*operatorDim));
 
     string fileName = "checkings_" + to_string ((long long)*nbBlocks) + "_" +
-                                     to_string ((long long)*mpiRank);
+                                     to_string ((long long)*rank);
     ofstream refASM (fileName, ios::out | ios::trunc);
     if (!refASM.is_open ()) {
         cerr << "Error: cannot store reference checking!\n";
@@ -63,11 +63,11 @@ void read_input_data (double **coord, int **elemToNode, int **neighborList,
                       int **intfIndex, int **intfNodes, int **dispList,
                       int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
                       int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
-                      int *nbBoundNodes, int nbBlocks, int mpiRank)
+                      int *nbBoundNodes, int nbBlocks, int rank)
 {
 	string fileName = (string)DATA_PATH + "/" + meshName + "/inputs/" + operatorName
                       + "_" + to_string ((long long)nbBlocks) + "_"
-                      + to_string ((long long)mpiRank);
+                      + to_string ((long long)rank);
 	ifstream inputFile (fileName, ios::in | ios::binary);
     if (!inputFile.is_open ()) {
         cerr << "Error: cannot read input data: " << fileName << "\n";
@@ -106,10 +106,10 @@ void store_input_data_ (double *coord, int *elemToNode, int *neighborList,
                         int *boundNodesCode, int *nbElem, int *dimElem,
                         int *nbNodes, int *dimNode, int *nbEdges, int *nbIntf,
                         int *nbIntfNodes, int *nbDispNodes, int *nbBoundNodes,
-                        int *nbBlocks, int *mpiRank)
+                        int *nbBlocks, int *rank)
 {
 	string fileName = "inputs_" + to_string ((long long)*nbBlocks) + "_" +
-                                  to_string ((long long)*mpiRank);
+                                  to_string ((long long)*rank);
 	ofstream inputFile (fileName, ios::out | ios::trunc | ios::binary);
     if (!inputFile.is_open ()) {
         cerr << "Error: cannot store input data!\n";

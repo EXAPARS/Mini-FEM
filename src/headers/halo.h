@@ -20,6 +20,6 @@
 // Halo exchange between MPI domains
 void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
                     int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
-                    int operatorID, int mpiRank);
+                    int operatorID, int rank);
 
 #endif

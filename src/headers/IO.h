@@ -19,20 +19,20 @@
 
 // Read reference norm of matrix & preconditioner arrays
 void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks,
-                        int mpiRank);
+                        int rank);
 
 // Store reference norm of matrix & preconditioner arrays
 extern "C"
 void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
                           int *nbNodes, int *operatorDim, int *nbBlocks,
-                          int *mpiRank);
+                          int *rank);
 
 // Read input data from DefMesh
 void read_input_data (double **coord, int **elemToNode, int **neighborList,
                       int **intfIndex, int **intfNodes, int **dispList,
                       int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
                       int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
-                      int *nbBoundNodes, int nbBlocks, int mpiRank);
+                      int *nbBoundNodes, int nbBlocks, int rank);
 
 // Store necessary data from DefMesh
 extern "C"
@@ -41,6 +41,6 @@ void store_input_data_ (double *coord, int *elemToNode, int *neighborList,
                         int *boundNodesCode, int *nbElem, int *dimElem,
                         int *nbNodes, int *dimNode, int *nbEdges, int *nbIntf,
                         int *nbIntfNodes, int *nbDispNodes, int *nbBoundNodes,
-                        int *nbBlocks, int *mpiRank);
+                        int *nbBlocks, int *rank);
 
 #endif
