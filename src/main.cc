@@ -17,6 +17,7 @@
 #ifdef XMPI
     #include <mpi.h>
 #elif GASPI
+    #include <GASPI.h>
 #endif
 #include <iostream>
 #include <iomanip>
@@ -87,6 +88,9 @@ int main (int argCount, char **argValue)
 	    MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
 	    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
+        gaspi_proc_init (GASPI_BLOCK);
+        gaspi_proc_num (&nbBlocks);
+        gaspi_proc_rank (&rank);
     #endif
 
 	// Arguments initialization
@@ -306,11 +310,16 @@ int main (int argCount, char **argValue)
 
     // Check results on nodeToNodeValue & prec arrays
     if (rank == 0) cout << "done\n\nChecking results...\n" << setprecision (3);
-    check_assembly (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim,
-                    nbBlocks, rank);
+    check_assembly (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim, nbBlocks,
+                    rank);
     delete[] prec, delete[] nodeToNodeValue;
     if (rank == 0) cout << "done\n";
 
-	MPI_Finalize ();
+    #ifdef XMPI
+	    MPI_Finalize ();
+    #elif GASPI
+        gaspi_proc_term (GASPI_BLOCK);
+    #endif
+
 	return EXIT_SUCCESS;
 }

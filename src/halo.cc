@@ -14,13 +14,17 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <mpi.h>
+#ifdef XMPI
+    #include <mpi.h>
+#elif GASPI
+    #include <GASPI.h>
+#endif
 #include <stdio.h>
 
 #include "globals.h"
 #include "halo.h"
 
-// Halo exchange between MPI domains (only for elasticity operator)
+// Halo exchange between distributed domains
 void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
                     int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
                     int operatorID, int rank)

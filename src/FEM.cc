@@ -14,7 +14,11 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <mpi.h>
+#ifdef XMPI
+    #include <mpi.h>
+#elif GASPI
+    #include <GASPI.h>
+#endif
 #include <iostream>
 #include <cmath>
 #include <DC.h>

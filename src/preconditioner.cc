@@ -51,7 +51,7 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
         }
     }
 
-    // MPI communications
+    // Distributed communications
     if (nbBlocks > 1) {
         halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
                        nbIntfNodes, operatorDim, operatorID, rank);
@@ -107,7 +107,7 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
         }
     }
 
-	// MPI communications
+	// Distributed communications
     if (nbBlocks > 1) {
         halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
                        nbIntfNodes, operatorDim, operatorID, rank);
