@@ -82,15 +82,15 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
 int main (int argCount, char **argValue)
 {
 	// Process initialization
-	int nbBlocks, rank;
+	int nbBlocks = 0, rank = 0;
     #ifdef XMPI
 	    MPI_Init (&argCount, &argValue);
 	    MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
 	    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
         gaspi_proc_init (GASPI_BLOCK);
-        gaspi_proc_num (&nbBlocks);
-        gaspi_proc_rank (&rank);
+        gaspi_proc_num ((gaspi_rank_t*)&nbBlocks);
+        gaspi_proc_rank ((gaspi_rank_t*)&rank);
     #endif
 
 	// Arguments initialization

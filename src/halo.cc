@@ -41,14 +41,17 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
         size   = (node2 - node1) * operatorDim;
         source = neighborList[i] - 1;
         tag    = neighborList[i] + 100;
-        MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
-                   source, tag, MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
+        #ifdef XMPI
+            MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
+                       source, tag, MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
+        #elif GASPI
+        #endif
     }
 
     // Buffering local data
     node2 = 0;
     // Laplacian operator
-    if (operatorID = 0) {
+    if (operatorID == 0) {
         for (int i = 0; i < nbIntf; i++) {
             node1 = node2;
             node2 = intfIndex[i+1];
@@ -82,19 +85,24 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
         size  = (node2 - node1) * operatorDim;
         dest  = neighborList[i] - 1;
         tag   = rank + 101;
-        MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION, dest,
-                  tag, MPI_COMM_WORLD);
+        #ifdef XMPI
+            MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
+                      dest, tag, MPI_COMM_WORLD);
+        #elif GASPI
+        #endif
     }
 
-    // Waiting incoming data
-    for (int i = 0; i < nbIntf; i++) {
-        MPI_Wait (&(neighborList[2*nbIntf+i]), MPI_STATUS_IGNORE);
-    }
+    #ifdef XMPI
+        // Waiting incoming data
+        for (int i = 0; i < nbIntf; i++) {
+            MPI_Wait (&(neighborList[2*nbIntf+i]), MPI_STATUS_IGNORE);
+        }
+    #endif
 
     // Assembling local and incoming data
     node2 = 0;
     // Laplacian operator
-    if (operatorID = 0) {
+    if (operatorID == 0) {
         for (int i = 0; i < nbIntf; i++) {
             node1  = node2;
             node2  = intfIndex[i+1];

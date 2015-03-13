@@ -17,7 +17,7 @@
 #ifndef HALO_H
 #define HALO_H
 
-// Halo exchange between MPI domains
+// Halo exchange between distributed domains
 void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
                     int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
                     int operatorID, int rank);

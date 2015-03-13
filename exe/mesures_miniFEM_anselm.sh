@@ -2,33 +2,42 @@
 
 # Set the parameters
 MAX_CORES=240
-EXE_DIR=$HOME/lthebaul/MiniFEM/exe
-TEST_CASE=EIB
+EXE_DIR=$HOME/lthebaul/Mini-FEM/exe
+MACHINE_FILE=$EXE_DIR/machine_file
+EXE_FILE=$EXE_DIR/env_file.sh
+TEST_CASE=LM6
 VECTOR_LENGTH=AVX
-NB_ITERATIONS=50
+NB_ITERATIONS=5
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
 # Load the required modules
-module load PrgEnv-intel/13.5.192
+module load gpi2/1.1.1 PrgEnv-intel/14.0.1
+
+# Create the machine and the environment file
+cat $PBS_NODEFILE | cut -d'.' -f1 > $MACHINE_FILE
+echo "#!/bin/sh" > $EXE_FILE
+echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$LD_LIBRARY_PATH" >> $EXE_FILE
+chmod +x $EXE_FILE
 
 for OPERATOR in 'ela' #'lap'
 do
-    for PART_SIZE in 50 200 500
+    for PART_SIZE in 200 #50 200 500
     do
         export elemPerPart=$PART_SIZE
    	    echo "$TEST_CASE $OPERATOR, $PART_SIZE elements max per partition"
 
-        for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
+        for VERSION in 'REF' #'COLORING_OMP' 'DC' 'DC_HYBRID'
         do
-            BINARY=./bin/miniFEM_$VERSION
-            OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES
+            BINARY=$EXE_DIR/bin/miniFEM_GASPI_CILK_$VERSION
+            OUTPUT_FILE=$EXE_DIR/stdout_$VERSION\_$NB_NODES
+            echo "$BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS" >> $EXE_FILE
             echo -e "\n$VERSION"
 
-            for NB_PROCESS in 1 4 8 12 16 32
+            for NB_PROCESS in 1 #4 8 12 16 32
             do
-                for NB_THREADS in 1 2 4 8 12 16
+                for NB_THREADS in 1 #2 4 8 12 16
                 do
                     let "nbCores=$NB_PROCESS*$NB_THREADS"
                     if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
@@ -38,8 +47,8 @@ do
                     export OMP_NUM_THREADS=$NB_THREADS
                     echo "$NB_PROCESS processus, $NB_THREADS threads"
 
-       	            mpirun -np $NB_PROCESS $BINARY $TEST_CASE $OPERATOR \
-                               $NB_ITERATIONS > $OUTPUT_FILE
+       	            #mpirun -np $NB_PROCESS $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS > $OUTPUT_FILE
+                    gaspi_run -m $MACHINE_FILE $EXE_FILE  > $OUTPUT_FILE
 
        	            matrixASM=0
        	            precond=0
@@ -52,7 +61,7 @@ do
        	            		tmpVar=`echo $line | cut -d " " -f5`
                             echo $tmpVar >> miniFEM_$TEST_CASE\_$NB_NODES\_$OPERATOR\_$PART_SIZE\_$VERSION\_$NB_PROCESS\_$NB_THREADS.ASM
                             if [ $firstASM == 0 ]; then
-       	            		    let "matrixASM=$matrixASM+$tmpVar"
+       	                        let "matrixASM=$matrixASM+$tmpVar"
                             fi
                             firstASM=0
        	            	fi
@@ -79,6 +88,8 @@ do
         done
         echo
     done
-done > miniFEM_$TEST_CASE\_$NB_NODES.log
+done > $EXE_DIR/miniFEM_$TEST_CASE\_$NB_NODES.log
+
+rm $MACHINE_FILE $EXE_FILE
 
 exit

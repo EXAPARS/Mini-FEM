@@ -17,11 +17,13 @@
 #  Mini-FEM. If not, see <http://www.gnu.org/licenses/>.
 
 # Libraries path
-DATA_PATH="$HOME/Dassault/DC_Data"
-DC_PATH="$HOME/Dassault/DC-lib"
+DATA_PATH="$HOME/lthebaul/DC_Data"
+DC_PATH="$HOME/lthebaul/DC-lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
+GASPI_PATH="/apps/libs/gpi2/1.1.1"
+GASPI_LIBRARIES="$GASPI_PATH/lib64/libGPI2.a"
 METIS_PATH="$HOME/Programs/METIS"
 METIS_LIBRARIES="$METIS_PATH/lib/libmetis.a"
 CILKVIEW_INCLUDE="$HOME/Programs/CilkTools/include/cilktools"
@@ -140,8 +142,12 @@ if [ ! -d "$DC_PATH" ]; then
     echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
+if [[ $DISTRI == "gaspi" ]] && [[ ! -d "$GASPI_PATH" ]]; then
+    echo -e "\\033[1;31mIncorrect path to the GASPI library\\033[0;39m"
+    exit
+fi
 if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
-    echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
+    echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
     exit
 fi
 
@@ -181,48 +187,31 @@ cd $CURRENT_PATH
 
 # Cross compile for MIC
 if [[ $ARCHI == "mic" ]]; then
-	export CC=icc
-	export CXX=icpc
-	export FC=ifort
-	export CFLAGS="-mmic"
-	export CXXFLAGS=$CFLAGS
-	export FFLAGS=$CFLAGS
-	export MPI_C=mpiicc
-	export MPI_CXX=mpiicpc
+    export CC=icc
+    export CXX=icpc
+    export FC=ifort
+    export CFLAGS="-mmic"
+    export CXXFLAGS=$CFLAGS
+    export FFLAGS=$CFLAGS
+    export MPI_C=mpiicc
+    export MPI_CXX=mpiicpc
 
-    if [[ $TREE == 1 ]]; then
-	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
-              -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
-              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
-              -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              . -G "Unix Makefiles"
-    else
-	    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-              -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
-              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE $DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DVERSION=$VERSION -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI \
-              -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              . -G "Unix Makefiles"
-    fi
+    cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
+          -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE \
+          -DDC_LIBRARIES=$DC_LIBRARIES -DGASPI_LIBRARIES=$GASPI_LIBRARIES \
+          -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
+          -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
+          -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+          -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+          . -G "Unix Makefiles"
 else
-    if [[ $TREE == 1 ]]; then
-        cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
-              -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
-              -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
-              -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-              -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              . -G "Unix Makefiles"
-    else
-        cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
-              -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-              -DVERSION=$VERSION -DARCHI=$ARCHI -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
-              -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI \
-              -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
-              . -G "Unix Makefiles"
-    fi
+    cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE \
+          -DDC_LIBRARIES=$DC_LIBRARIES -DGASPI_LIBRARIES=$GASPI_LIBRARIES \
+          -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
+          -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
+          -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
+          -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+          . -G "Unix Makefiles"
 fi
 
 # Compile

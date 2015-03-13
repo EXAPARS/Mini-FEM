@@ -20,21 +20,24 @@ cmake_minimum_required (VERSION 2.6)
 set (EXECUTABLE_OUTPUT_PATH ../bin)
 set (CMAKE_Fortran_COMPILER ifort)
 set (CMAKE_CXX_COMPILER icpc)
-set (CMAKE_C_COMPILER icc)
 
 # Project
 project (Mini-FEM)
 enable_language (Fortran)
-if (${DISTRI} STREQUAL "XMPI")
-    find_package (MPI)
-endif (${DISTRI} STREQUAL "XMPI")
 
 # Flags
 set (flags "-O2 -mkl:sequential -DDATA_PATH=\\\"${DATA_PATH}\\\"")
 add_definitions (-D${DISTRI} -D${SHARED} -D${VERSION})
-if (${SHARED} STREQUAL "OMP")
-	set (flags "${flags} -openmp")
-endif (${SHARED} STREQUAL "OMP")
+if (${DISTRI} STREQUAL "XMPI")
+    find_package (MPI)
+elseif (${DISTRI} STREQUAL "GASPI")
+    set (flags "${flags} -libverbs -lGPI2")
+endif (${DISTRI} STREQUAL "XMPI")
+if (${SHARED} STREQUAL "CILK")
+	set (flags "${flags} -lcilkrts")
+elseif (${SHARED} STREQUAL "OMP")
+    set (flags "${flags} -openmp")
+endif (${SHARED} STREQUAL "CILK")
 if (${ARCHI} STREQUAL "SSE")
     set (flags "${flags} -msse")
     add_definitions (-DVEC_SIZE=2)
@@ -70,10 +73,9 @@ endif (${VTUNE})
 if (${CILKVIEW})
 	add_definitions (-DCILKVIEW)
 endif (${CILKVIEW})
-set (CMAKE_C_FLAGS ${flags})
 set (CMAKE_CXX_FLAGS "${flags} -std=c++11")
 set (CMAKE_Fortran_FLAGS "${flags} -fpp -convert big_endian")
-set (CMAKE_EXE_LINKER_FLAGS "${flags} -nofor-main -lstdc++ -lcilkrts")
+set (CMAKE_EXE_LINKER_FLAGS "${flags} -nofor-main -lstdc++")
 
 # Headers
 include_directories (../src/headers)
@@ -132,6 +134,11 @@ if (${DISTRI} STREQUAL "XMPI")
     target_link_libraries (
         ${exec}
         ${MPI_LIBRARIES}
+    )
+elseif (${DISTRI} STREQUAL "GASPI")
+    target_link_libraries (
+        ${exec}
+        ${GASPI_LIBRARIES}
     )
 endif (${DISTRI} STREQUAL "XMPI")
 if (${TREE})
