@@ -17,9 +17,16 @@
 #ifndef HALO_H
 #define HALO_H
 
-// Halo exchange between distributed domains
-void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
-                    int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
-                    int operatorID, int rank);
+#ifdef XMPI
+// Halo exchange between MPI ranks
+void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
+                        int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
+                        int operatorDim, int operatorID, int rank);
+#elif GASPI
+// Halo exchange between GASPI ranks
+void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
+                          int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
+                          int operatorDim, int operatorID, int rank);
+#endif
 
 #endif

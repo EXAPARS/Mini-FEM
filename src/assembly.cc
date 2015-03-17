@@ -14,7 +14,9 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <cilk/cilk.h>
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 #include <DC.h>
 
 #include "globals.h"
@@ -192,8 +194,12 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
 
     #ifdef COLORING
         // For each element of the interval in parallel
-        //#pragma omp parallel for
-        cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int elem = firstElem; elem <= lastElem; elem++) {
+        #elif CILK
+            cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
+        #endif
     #else
         // For each element of the interval in sequential
         for (int elem = firstElem; elem <= lastElem; elem++) {
@@ -443,8 +449,12 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
 
     #ifdef COLORING
         // For each element of the interval in parallel
-        //#pragma omp parallel for
-        cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int elem = firstElem; elem <= lastElem; elem++) {
+        #elif CILK
+            cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
+        #endif
     #else
         // For each element of the interval in sequential
         for (int elem = firstElem; elem <= lastElem; elem++) {
@@ -569,10 +579,16 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         }
     #elif COLORING
         // Parallel reset of CSR matrix
-        //#pragma omp parallel for
-        cilk_for (int i = 0; i < nbEdges * operatorDim; i++) {
-            nodeToNodeValue[i] = 0;
-        }
+        #ifdef OMP
+            #pragma omp parallel for
+            for (int i = 0; i < nbEdges * operatorDim; i++) {
+                nodeToNodeValue[i] = 0;
+            }
+        #elif CILK
+            cilk_for (int i = 0; i < nbEdges * operatorDim; i++) {
+                nodeToNodeValue[i] = 0;
+            }
+        #endif
         // Coloring parallel assembly
         coloring_assembly (&userArgs, operatorID);
     #elif DC

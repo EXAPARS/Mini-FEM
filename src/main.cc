@@ -140,7 +140,6 @@ int main (int argCount, char **argValue)
 
     // D&C version
     #ifdef DC
-
         // Set the path to the D&C tree and permutations
         #ifdef HYBRID
             string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/Hybrid_"
@@ -196,7 +195,6 @@ int main (int argCount, char **argValue)
 
     // Mesh coloring version
     #elif COLORING
-
         // Create the coloring
         if (rank == 0) {
             cout << "Coloring of the mesh...              ";

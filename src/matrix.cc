@@ -14,7 +14,9 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <cilk/cilk.h>
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 
 #include "globals.h"
 #include "matrix.h"
@@ -27,7 +29,7 @@ void create_elemToEdge (int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNo
     #ifdef OMP
         #pragma omp parallel for
         for (int i = 0; i < nbElem; i++) {
-    #else
+    #elif CILK
         cilk_for (int i = 0; i < nbElem; i++) {
     #endif
         int ctr = 0;

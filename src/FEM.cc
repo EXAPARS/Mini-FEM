@@ -16,6 +16,8 @@
 
 #ifdef XMPI
     #include <mpi.h>
+#elif GASPI
+    #include <GASPI.h>
 #endif
 #include <iostream>
 #include <cmath>
@@ -111,6 +113,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         #ifdef XMPI
             MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
                         MPI_COMM_WORLD);
+        #elif GASPI
+            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
+                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
         #endif
 		if (rank == 0) {
 	        cout << iter << ". Matrix assembly         : " << globalElapsed
@@ -128,6 +133,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         #ifdef XMPI
             MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
                         MPI_COMM_WORLD);
+        #elif GASPI
+            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
+                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
         #endif
         if (rank == 0) {
             cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";

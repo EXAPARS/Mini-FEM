@@ -14,7 +14,9 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <cilk/cilk.h>
+#ifdef CILK
+    #include <cilk/cilk.h>
+#endif
 
 #include "globals.h"
 #include "preconditioner.h"
@@ -28,16 +30,13 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
                          int operatorDim, int operatorID, int rank)
 {
 	// Copy matrix diagonal into preconditioner
-    #ifdef REF
+    #if defined (REF)
         for (int i = 0; i < nbNodes; i++) {
-    #elif COLORING
-        //#pragma omp parallel for
-        cilk_for (int i = 0; i < nbNodes; i++) {
-    #elif DC
+    #elif defined (DC) || defined (COLORING)
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
-        #else
+        #elif CILK
             cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
@@ -53,22 +52,20 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 
     // Distributed communications
     if (nbBlocks > 1) {
-        halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
-                       nbIntfNodes, operatorDim, operatorID, rank);
+        #ifdef XMPI
+        #elif GASPI
+        #endif
     }
 
     // Inversion of preconditioner
     int dimNode = DIM_NODE, error;
-    #ifdef REF
+    #if defined (REF)
     	for (int i = 1; i <= nbNodes; i++) {
-    #elif COLORING
-        //#pragma omp parallel for
-        cilk_for (int i = 1; i <= nbNodes; i++) {
-    #elif DC
+    #elif defined (DC) || defined (COLORING)
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 1; i <= nbNodes; i++) {
-        #else
+        #elif CILK
             cilk_for (int i = 1; i <= nbNodes; i++) {
         #endif
     #endif
@@ -86,16 +83,13 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
                          int rank)
 {
 	// Copy matrix diagonal into preconditioner
-    #ifdef REF
+    #if defined (REF)
     	for (int i = 0; i < nbNodes; i++) {
-    #elif COLORING
-        //#pragma omp parallel for
-    	cilk_for (int i = 0; i < nbNodes; i++) {
-    #elif DC
+    #elif defined (DC) || defined (COLORING)
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
-        #else
+        #elif CILK
     	    cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
@@ -109,26 +103,24 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
 
 	// Distributed communications
     if (nbBlocks > 1) {
-        halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes, nbIntf,
-                       nbIntfNodes, operatorDim, operatorID, rank);
+        #ifdef XMPI
+        #elif GASPI
+        #endif
     }
 
 	// Inversion of preconditioner
-    #ifdef REF
+    #if defined (REF)
     	for (int i = 0; i < nbNodes; i++) {
-    #elif COLORING
-        //#pragma omp parallel for
-    	cilk_for (int i = 0; i < nbNodes; i++) {
-    #elif DC
+    #elif defined (DC) || defined (COLORING)
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
-        #else
+        #elif CILK
     	    cilk_for (int i = 0; i < nbNodes; i++) {
         #endif
     #endif
-		    prec[i] = 1.0 / prec[i];
-	    }
+	    prec[i] = 1.0 / prec[i];
+	}
 }
 
 // Call the appropriate function to create the preconditioner
@@ -139,16 +131,13 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
                      int operatorDim, int operatorID, int rank)
 {
     // Preconditioner reset
-    #ifdef REF
+    #if defined (REF)
         for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
-    #elif COLORING
-        //#pragma omp parallel for
-        cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
-    #elif DC
+    #elif defined (DC) || defined (COLORING)
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
-        #else
+        #elif CILK
             cilk_for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
         #endif
     #endif

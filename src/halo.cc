@@ -24,10 +24,12 @@
 #include "globals.h"
 #include "halo.h"
 
-// Halo exchange between distributed domains
-void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborList,
-                    int nbNodes, int nbIntf, int nbIntfNodes, int operatorDim,
-                    int operatorID, int rank)
+#ifdef XMPI
+
+// Halo exchange between MPI ranks
+void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
+                        int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
+                        int operatorDim, int operatorID, int rank)
 {
     // Initialize communication buffers
     double *bufferSend = new double [nbIntfNodes*operatorDim];
@@ -41,11 +43,8 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
         size   = (node2 - node1) * operatorDim;
         source = neighborList[i] - 1;
         tag    = neighborList[i] + 100;
-        #ifdef XMPI
-            MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
-                       source, tag, MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
-        #elif GASPI
-        #endif
+        MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
+                   source, tag, MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
     }
 
     // Buffering local data
@@ -85,19 +84,14 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
         size  = (node2 - node1) * operatorDim;
         dest  = neighborList[i] - 1;
         tag   = rank + 101;
-        #ifdef XMPI
-            MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
-                      dest, tag, MPI_COMM_WORLD);
-        #elif GASPI
-        #endif
+        MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE_PRECISION,
+                  dest, tag, MPI_COMM_WORLD);
     }
 
-    #ifdef XMPI
-        // Waiting incoming data
-        for (int i = 0; i < nbIntf; i++) {
-            MPI_Wait (&(neighborList[2*nbIntf+i]), MPI_STATUS_IGNORE);
-        }
-    #endif
+    // Waiting incoming data
+    for (int i = 0; i < nbIntf; i++) {
+        MPI_Wait (&(neighborList[2*nbIntf+i]), MPI_STATUS_IGNORE);
+    }
 
     // Assembling local and incoming data
     node2 = 0;
@@ -131,3 +125,47 @@ void halo_exchange (double *prec, int *intfIndex, int *intfNodes, int *neighborL
     // Free communication buffers
     delete[] bufferRecv, delete[] bufferSend;
 }
+
+#elif GASPI
+
+// Halo exchange between GASPI ranks
+void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
+                          int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
+                          int operatorDim, int operatorID, int rank)
+{
+    gaspi_segment_create (0, nbIntfNodes*operatorDim, GASPI_GROUP_ALL, GASPI_BLOCK,
+                          GASPI_ALLOC_DEFAULT);
+
+    // Buffering local data
+    node2 = 0;
+    // Laplacian operator
+    if (operatorID == 0) {
+        for (int i = 0; i < nbIntf; i++) {
+            node1 = node2;
+            node2 = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    bufferSend[j*operatorDim+k] = prec[k*operatorDim+tmpNode];
+                }
+            }
+        }
+    }
+    // Elasticity operator
+    else {
+        for (int i = 0; i < nbIntf; i++) {
+            node1 = node2;
+            node2 = intfIndex[i+1];
+            for (int j = node1; j < node2; j++) {
+                for (int k = 0; k < operatorDim; k++) {
+                    int tmpNode = intfNodes[j] - 1;
+                    bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                }
+            }
+        }
+    }
+
+    gaspi_segment_delete (0);
+}
+
+#endif
