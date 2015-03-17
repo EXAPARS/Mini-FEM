@@ -139,9 +139,9 @@ int main (int argCount, char **argValue)
     }
 
     // D&C version
-    #ifdef DC
+    #if defined (DC) || defined (DC_HYBRID)
         // Set the path to the D&C tree and permutations
-        #ifdef HYBRID
+        #ifdef DC_HYBRID
             string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/Hybrid_"
         #else
             string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/DC_"
@@ -240,7 +240,7 @@ int main (int argCount, char **argValue)
     }
 
     // Finalize and store the D&C tree
-    #if defined (DC) && defined (TREE_CREATION)
+    #if (defined (DC) || defined (DC_HYBRID)) && defined (TREE_CREATION)
         if (rank == 0) {
             cout << "Finalizing the D&C tree...           ";
             t1 = DC_get_time ();

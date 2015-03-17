@@ -23,7 +23,7 @@ typedef struct {
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
 } userArgs_t;
 
-#ifdef HYBRID
+#ifdef DC_HYBRID
 // Vectorial version of elasticity assembly on a given element interval
 void assembly_ela_vec (void *userArgs, int firstElem, int lastElem);
 #endif
@@ -31,7 +31,7 @@ void assembly_ela_vec (void *userArgs, int firstElem, int lastElem);
 // Sequential version of elasticity assembly on a given element interval
 void assembly_ela_seq (void *userArgs, int firstElem, int lastElem);
 
-#ifdef HYBRID
+#ifdef DC_HYBRID
 // Vectorial version of laplacian assembly on a given element interval
 void assembly_lap_vec (void *userArgs, int firstElem, int lastElem);
 #endif

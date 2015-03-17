@@ -30,9 +30,9 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
                          int operatorDim, int operatorID, int rank)
 {
 	// Copy matrix diagonal into preconditioner
-    #if defined (REF)
+    #ifdef REF
         for (int i = 0; i < nbNodes; i++) {
-    #elif defined (DC) || defined (COLORING)
+    #else
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
@@ -53,15 +53,17 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
     // Distributed communications
     if (nbBlocks > 1) {
         #ifdef XMPI
+            MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                               nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #elif GASPI
         #endif
     }
 
     // Inversion of preconditioner
     int dimNode = DIM_NODE, error;
-    #if defined (REF)
+    #ifdef REF
     	for (int i = 1; i <= nbNodes; i++) {
-    #elif defined (DC) || defined (COLORING)
+    #else
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 1; i <= nbNodes; i++) {
@@ -83,9 +85,9 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
                          int rank)
 {
 	// Copy matrix diagonal into preconditioner
-    #if defined (REF)
+    #ifdef REF
     	for (int i = 0; i < nbNodes; i++) {
-    #elif defined (DC) || defined (COLORING)
+    #else
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
@@ -104,14 +106,16 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
 	// Distributed communications
     if (nbBlocks > 1) {
         #ifdef XMPI
+            MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                               nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #elif GASPI
         #endif
     }
 
 	// Inversion of preconditioner
-    #if defined (REF)
+    #ifdef REF
     	for (int i = 0; i < nbNodes; i++) {
-    #elif defined (DC) || defined (COLORING)
+    #else
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes; i++) {
@@ -131,9 +135,9 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
                      int operatorDim, int operatorID, int rank)
 {
     // Preconditioner reset
-    #if defined (REF)
+    #ifdef REF
         for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;
-    #elif defined (DC) || defined (COLORING)
+    #else
         #ifdef OMP
             #pragma omp parallel for
             for (int i = 0; i < nbNodes * operatorDim; i++) prec[i] = 0;

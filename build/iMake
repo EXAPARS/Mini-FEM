@@ -81,7 +81,7 @@ for i in $@; do
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
 	elif [[ $i == "hybrid" ]]; then
-        VERSION="HYBRID"
+        VERSION="DC_HYBRID"
 	elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
 	elif [[ $i == "avx" ]]; then
@@ -125,12 +125,12 @@ if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
     exit
 fi
 if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] &&
-   [[ $VERSION != "dc" ]]  && [[ $VERSION != "hybrid" ]]; then
+   [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_hybrid" ]]; then
     echo -e "\\033[1;31mPlease specify the code version (Ref, DC, Hybrid, Coloring) \
              \\033[0;39m"
     exit
 fi
-if [[ $VERSION == "hybrid" ]] && [[ $ARCHI == 0 ]]; then
+if [[ $VERSION == "dc_hybrid" ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
@@ -154,7 +154,7 @@ fi
 # Configure D&C library
 DC_ARGUMENTS="$DISTRI $SHARED"
 DC_LIBRARIES=$DC_LIBRARIES\_$DISTRI\_$SHARED
-if [[ $VERSION == "hybrid" ]]; then
+if [[ $VERSION == "dc_hybrid" ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_Hybrid_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS hybrid $ARCHI"
 fi

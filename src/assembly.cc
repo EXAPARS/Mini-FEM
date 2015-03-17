@@ -22,7 +22,7 @@
 #include "globals.h"
 #include "assembly.h"
 
-#ifdef HYBRID
+#ifdef DC_HYBRID
 // Vectorial version of elasticity assembly on a given element interval
 void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
 {
@@ -195,7 +195,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     #ifdef COLORING
         // For each element of the interval in parallel
         #ifdef OMP
-            #pragma omp parallel for
+            //#pragma omp parallel for  // Disable because of a bug
             for (int elem = firstElem; elem <= lastElem; elem++) {
         #elif CILK
             cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
@@ -320,7 +320,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     }
 }
 
-#ifdef HYBRID
+#ifdef DC_HYBRID
 // Vectorial version of laplacian assembly on a given element interval
 void assembly_lap_vec (void *userArgs, int firstElem, int lastElem)
 {
@@ -413,7 +413,7 @@ void assembly_lap_vec (void *userArgs, int firstElem, int lastElem)
             // For each edge of current element
             for (int j = 0; j < VEC_SIZE; j++) {
                 for (int k = 0; k < DIM_ELEM; k++) {
-                  	int node1 = elemToNode[(elem+j)*DIM_ELEM+k] - 1;
+                    int node1 = elemToNode[(elem+j)*DIM_ELEM+k] - 1;
                 	for (int l = 0; l < DIM_ELEM; l++) {
                   		int node2 = elemToNode[(elem+j)*DIM_ELEM+l];
                 		for (int m = nodeToNodeRow[node1]; m < nodeToNodeRow[node1+1];
@@ -450,7 +450,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
     #ifdef COLORING
         // For each element of the interval in parallel
         #ifdef OMP
-            #pragma omp parallel for
+            //#pragma omp parallel for  // Disable because of a bug
             for (int elem = firstElem; elem <= lastElem; elem++) {
         #elif CILK
             cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
@@ -591,10 +591,10 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         #endif
         // Coloring parallel assembly
         coloring_assembly (&userArgs, operatorID);
-    #elif DC
+    #else
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
-            #ifdef HYBRID
+            #ifdef DC_HYBRID
                 DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs,
                                    nodeToNodeValue, operatorDim);
             #else
@@ -604,7 +604,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         }
         // Using elasticity operator
         else {
-            #ifdef HYBRID
+            #ifdef DC_HYBRID
                 DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs,
                                    nodeToNodeValue, operatorDim);
             #else
