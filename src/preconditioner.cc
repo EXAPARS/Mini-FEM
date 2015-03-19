@@ -56,6 +56,8 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
             MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #elif GASPI
+            GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                                 nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #endif
     }
 
@@ -109,6 +111,8 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
             MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #elif GASPI
+            GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                                 nbIntf, nbIntfNodes, operatorDim, operatorID, rank);
         #endif
     }
 
