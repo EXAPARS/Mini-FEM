@@ -128,25 +128,34 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                          int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
-                          int operatorDim, int operatorID, int rank)
+                          int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+                          int nbIntfNodes, int operatorDim, int operatorID, int rank)
 {
-    gaspi_pointer_t *srcSegment, *destSegment = NULL;
-    int dest, size, offset, node1, node2 = 0;
-    const gaspi_segment_id_t srcID = 0, destID = 1;
-    gaspi_size_t segmentSize = nbIntfNodes * operatorDim;
-    gaspi_notification_id_t nbNotifiesLeft = nbIntf;
+    gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
+    double *srcSegment = NULL, *destSegment = NULL;
+    int node1, node2 = 0, nbNotifiesLeft = nbIntf;
+    const gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
+    const gaspi_segment_id_t srcSegmentID = 0, destSegmentID = 1;
+    const gaspi_queue_id_t queueID = 0;
+    gaspi_return_t check;
 
     // Creation of the GASPI segments
-    gaspi_segment_create (srcID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
+    gaspi_segment_create (srcSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
                           GASPI_ALLOC_DEFAULT);
-    gaspi_segment_create (destID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
+    gaspi_segment_create (destSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
                           GASPI_ALLOC_DEFAULT);
-    gaspi_segment_ptr (srcID, srcSegment);
-    gaspi_segment_ptr (destID, destSegment);
+    gaspi_segment_ptr (srcSegmentID, &srcSegmentPtr);
+    gaspi_segment_ptr (destSegmentID, &destSegmentPtr);
+    srcSegment  = (double*)srcSegmentPtr;
+    destSegment = (double*)destSegmentPtr;
+
+    gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
+    if (rank == 0) gaspi_printf ("Segments créés\n");
 
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
+        int size, offset, dest;
+        gaspi_notification_id_t sendNotifyID = rank; // * nbIntf + i + 1;
         node1  = node2;
         node2  = intfIndex[i+1];
         size   = (node2 - node1) * operatorDim;
@@ -173,28 +182,42 @@ void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         }
 
         // Sending local data to adjacent domains
-        gaspi_write_notify (srcID, offset, dest, destID, offset, size, rank, 42, 0,
-                            GASPI_BLOCK);
+        check = gaspi_write_notify (srcSegmentID, offset, dest, destSegmentID, offset,
+                                    size, sendNotifyID, 1, queueID, GASPI_BLOCK);
+        if (check != GASPI_SUCCESS) {
+            cerr << "Error at gaspi_write_notify from rank " << rank << endl;
+            exit (EXIT_FAILURE);
+        }
+
+        gaspi_printf ("%d : %d a envoyé la notif %d a %d\n", i, rank, sendNotifyID, dest);
+    }
+
+    gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
+    if (rank == 0) {
+        gaspi_printf ("Envois terminés\n");
     }
 
     // For each notification from adjacent domains
     while (nbNotifiesLeft > 0) {
-        gaspi_notification_id_t recvID, recvValue;
-        gaspi_return_t check;
+        gaspi_notification_t recvNotifyValue;
+        gaspi_notification_id_t recvNotifyID;
 
         // Wait & reset the first incoming notification
-        check = gaspi_notify_waitsome (destID, 0, nbIntf, &recvID, GASPI_BLOCK);
-        if (check == GASPI_ERROR || check == GASPI_TIMEOUT) {
-            cerr << "Error at gaspi_notify_waitsome\n";
+        check = gaspi_notify_waitsome (destSegmentID, 0, nbBlocks, &recvNotifyID,
+                                       GASPI_BLOCK);
+        if (check != GASPI_SUCCESS) {
+            cerr << "Error at gaspi_notify_waitsome from rank " << rank << endl;
             exit (EXIT_FAILURE);
         }
-        check = gaspi_notify_reset (destID, recvID, &recvValue);
-        if (check == GASPI_ERROR) {
-            cerr << "Error at gaspi_notify_reset\n";
+        check = gaspi_notify_reset (destSegmentID, recvNotifyID, &recvNotifyValue);
+        if (check != GASPI_SUCCESS) {
+            cerr << "Error at gaspi_notify_reset from rank " << rank << endl;
             exit (EXIT_FAILURE);
         }
         nbNotifiesLeft--;
 
+        gaspi_printf ("%d : %d a recu et reset la notif de %d\n", nbNotifiesLeft, rank, recvNotifyID);
+/*
         // Assembling local and incoming data with laplacian operator
         node1 = intfIndex[recvID];
         node2 = intfIndex[recvID+1];
@@ -215,11 +238,16 @@ void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                 }
             }
         }
+*/
     }
 
     // Free GASPI segments
-    gaspi_segment_delete (srcID);
-    gaspi_segment_delete (destID);
+    gaspi_wait (queueID, GASPI_BLOCK);
+    gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
+    gaspi_segment_delete (srcSegmentID);
+    gaspi_segment_delete (destSegmentID);
+
+    if (rank == 0) gaspi_printf ("\nSegments libérés\n");
 }
 
 #endif

@@ -1,2 +1,2 @@
-rm miniFEM_* stdout* mesures_miniFEM.o* mesures_miniFEM.e*
+rm miniFEM_* stdout* mesures_miniFEM.o* mesures_miniFEM.e* env_file.sh machine_file
 rm elemPerLeaf* colorPerLeaf* elemPerColor* elemToElem* dcTree* 2Dmatrix*

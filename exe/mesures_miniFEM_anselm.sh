@@ -7,7 +7,7 @@ MACHINE_FILE=$EXE_DIR/machine_file
 EXE_FILE=$EXE_DIR/env_file.sh
 TEST_CASE=LM6
 VECTOR_LENGTH=AVX
-NB_ITERATIONS=5
+NB_ITERATIONS=1
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit

@@ -25,8 +25,8 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 #elif GASPI
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                          int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
-                          int operatorDim, int operatorID, int rank);
+                          int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+                          int nbIntfNodes, int operatorDim, int operatorID, int rank);
 #endif
 
 #endif
