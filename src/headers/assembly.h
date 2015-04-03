@@ -17,31 +17,42 @@
 #ifndef ASSEMBLY_H
 #define ASSEMBLY_H
 
+#include <DC.h>
+
 // Structure containing the user arguments passed to ASM function
 typedef struct {
     double *coord, *nodeToNodeValue;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
+    int operatorDim;
 } userArgs_t;
 
 #ifdef DC_HYBRID
 // Vectorial version of elasticity assembly on a given element interval
-void assembly_ela_vec (void *userArgs, int firstElem, int lastElem);
+void assembly_ela_vec (void *userArgs, DCargs_t *DCargs);
+
+// Vectorial version of laplacian assembly on a given element interval
+void assembly_lap_vec (void *userArgs, DCargs_t *DCargs);
 #endif
 
 // Sequential version of elasticity assembly on a given element interval
+#if defined (DC) || defined (DC_HYBRID)
+void assembly_ela_seq (void *userArgs, DCargs_t *DCargs);
+#else
 void assembly_ela_seq (void *userArgs, int firstElem, int lastElem);
-
-#ifdef DC_HYBRID
-// Vectorial version of laplacian assembly on a given element interval
-void assembly_lap_vec (void *userArgs, int firstElem, int lastElem);
 #endif
 
 // Sequential version of laplacian assembly on a given element interval
+#if defined (DC) || defined (DC_HYBRID)
+void assembly_lap_seq (void *userArgs, DCargs_t *DCargs);
+#else
 void assembly_lap_seq (void *userArgs, int firstElem, int lastElem);
+#endif
 
+#ifdef COLORING
 // Iterate over the colors & execute the assembly step on the elements of a same color
 // in parallel
 void coloring_assembly (userArgs_t *userArgs, int operatorID);
+#endif
 
 // Call the appropriate function to perform the assembly step
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,

@@ -17,14 +17,12 @@
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
-#include <DC.h>
-
 #include "globals.h"
 #include "assembly.h"
 
 #ifdef DC_HYBRID
 // Vectorial version of elasticity assembly on a given element interval
-void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
+void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
 {
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
@@ -34,6 +32,18 @@ void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
+    int operatorDim         = tmpArgs->operatorDim;
+
+    // Get D&C arguments
+    int firstElem = DCargs->firstElem,
+        lastElem  = DCargs->lastElem;
+
+    // If leaf is not a separator, reset locally the CSR matrix
+    if (DCargs->isSep == 0) {
+        int firstEdge = DCargs->firstEdge * operatorDim;
+        int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+        nodeToNodeValue[firstEdge:lastEdge] = 0;
+    }
 
     // For each block of VEC_SIZE elements in the interval
     for (int elem = firstElem; elem <= lastElem; elem += VEC_SIZE) {
@@ -119,7 +129,6 @@ void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
 
                     // Update edges values
                     for (int k = 0; k < VEC_SIZE; k++) {
-                        int operatorDim = DIM_NODE * DIM_NODE;
                         nodeToNodeValue[index[k]*operatorDim+0] += edgeCoef[0][k];
                         nodeToNodeValue[index[k]*operatorDim+1] += edgeCoef[1][k];
                         nodeToNodeValue[index[k]*operatorDim+2] += edgeCoef[2][k];
@@ -144,7 +153,6 @@ void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
                              m++) {
                 			if (nodeToNodeColumn[m] == node2) {
                                 // Add element contribution
-                                int operatorDim = DIM_NODE * DIM_NODE;
                                 nodeToNodeValue[m*operatorDim+0]
                                     += elemCoef[k][0][j] * elemCoef[l][0][j] * 2.25
                                      + elemCoef[k][1][j] * elemCoef[l][1][j]
@@ -178,151 +186,9 @@ void assembly_ela_vec (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 }
-#endif
 
-// Sequential version of elasticity assembly on a given element interval
-void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
-{
-    // Get user arguments
-    userArgs_t *tmpArgs = (userArgs_t*)userArgs;
-    double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
-    int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
-        *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
-        *elemToNode         = tmpArgs->elemToNode,
-        *elemToEdge         = tmpArgs->elemToEdge;
-
-    #ifdef COLORING
-        // For each element of the interval in parallel
-        #ifdef OMP
-            //#pragma omp parallel for  // Disable because of a bug
-            for (int elem = firstElem; elem <= lastElem; elem++) {
-        #elif CILK
-            cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
-        #endif
-    #else
-        // For each element of the interval in sequential
-        for (int elem = firstElem; elem <= lastElem; elem++) {
-    #endif
-        double elemCoef[DIM_ELEM][DIM_NODE];
-        double xa, xb, xc, ya, yb, yc, za, zb, zc, vol;
-
-        // Compute element coefficient sequentially
-        for (int i = 0; i < DIM_ELEM; i++) {
-            int node = elemToNode[elem*DIM_ELEM+i] - 1;
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j] = coord[node*DIM_NODE+j];
-            }
-        }
-
-        xa = elemCoef[0][0] - elemCoef[3][0];
-        xb = elemCoef[2][0] - elemCoef[3][0];
-        xc = elemCoef[1][0] - elemCoef[3][0];
-        ya = elemCoef[0][1] - elemCoef[3][1];
-        yb = elemCoef[2][1] - elemCoef[3][1];
-        yc = elemCoef[1][1] - elemCoef[3][1];
-        za = elemCoef[0][2] - elemCoef[3][2];
-        zb = elemCoef[2][2] - elemCoef[3][2];
-        zc = elemCoef[1][2] - elemCoef[3][2];
-        elemCoef[0][0] = yb * zc - yc * zb;
-        elemCoef[0][1] = zb * xc - zc * xb;
-        elemCoef[0][2] = xb * yc - xc * yb;
-        elemCoef[1][0] = ya * zb - yb * za;
-        elemCoef[1][1] = za * xb - zb * xa;
-        elemCoef[1][2] = xa * yb - xb * ya;
-        elemCoef[2][0] = yc * za - ya * zc;
-        elemCoef[2][1] = zc * xa - za * xc;
-        elemCoef[2][2] = xc * ya - xa * yc;
-        elemCoef[3][0] = - (elemCoef[0][0] + elemCoef[1][0] + elemCoef[2][0]);
-        elemCoef[3][1] = - (elemCoef[0][1] + elemCoef[1][1] + elemCoef[2][1]);
-        elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
-        vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
-
-        elemCoef[:][:] *= (1. / vol);
-
-        // Optimized version with precomputed edge index
-        #ifdef OPTIMIZED
-            int ctr = 0;
-            // For each edge of current element
-            for (int i = 0; i < DIM_ELEM; i++) {
-                for (int j = 0; j < DIM_ELEM; j++) {
-                    // Get edge index & update its values
-                    int index = elemToEdge[elem*VALUES_PER_ELEM+ctr];
-                    int operatorDim = DIM_NODE * DIM_NODE;
-                    nodeToNodeValue[index*operatorDim+0]
-                        += elemCoef[i][0] * elemCoef[j][0] * 2.25
-                         + elemCoef[i][1] * elemCoef[j][1]
-                         + elemCoef[i][2] * elemCoef[j][2];
-                    nodeToNodeValue[index*operatorDim+1]
-                        += elemCoef[i][0] * elemCoef[j][1] * 1.25;
-                    nodeToNodeValue[index*operatorDim+2]
-                        += elemCoef[i][0] * elemCoef[j][2] * 1.25;
-                    nodeToNodeValue[index*operatorDim+3]
-                        += elemCoef[i][1] * elemCoef[j][0] * 1.25;
-                    nodeToNodeValue[index*operatorDim+4]
-                        += elemCoef[i][0] * elemCoef[j][0]
-                         + elemCoef[i][1] * elemCoef[j][1] * 2.25
-                         + elemCoef[i][2] * elemCoef[j][2];
-                    nodeToNodeValue[index*operatorDim+5]
-                        += elemCoef[i][1] * elemCoef[j][2] * 1.25;
-                    nodeToNodeValue[index*operatorDim+6]
-                        += elemCoef[i][2] * elemCoef[j][0] * 1.25;
-                    nodeToNodeValue[index*operatorDim+7]
-                        += elemCoef[i][2] * elemCoef[j][1] * 1.25;
-                    nodeToNodeValue[index*operatorDim+8]
-                        += elemCoef[i][0] * elemCoef[j][0]
-                         + elemCoef[i][1] * elemCoef[j][1]
-                         + elemCoef[i][2] * elemCoef[j][2] * 2.25;
-                    ctr++;
-                }
-            }
-        #else
-            // For each edge of current element
-            for (int j = 0; j < DIM_ELEM; j++) {
-              	int node1 = elemToNode[elem*DIM_ELEM+j] - 1;
-            	for (int k = 0; k < DIM_ELEM; k++) {
-              		int node2 = elemToNode[elem*DIM_ELEM+k];
-            		for (int l = nodeToNodeRow[node1];
-                             l < nodeToNodeRow[node1+1]; l++) {
-            			if (nodeToNodeColumn[l] == node2) {
-                            // Add element contribution
-                            int operatorDim = DIM_NODE * DIM_NODE;
-                            nodeToNodeValue[l*operatorDim+0]
-                                += elemCoef[j][0] * elemCoef[k][0] * 2.25
-                                 + elemCoef[j][1] * elemCoef[k][1]
-                                 + elemCoef[j][2] * elemCoef[k][2];
-                            nodeToNodeValue[l*operatorDim+1]
-                                += elemCoef[j][0] * elemCoef[k][1] * 1.25;
-                            nodeToNodeValue[l*operatorDim+2]
-                                += elemCoef[j][0] * elemCoef[k][2] * 1.25;
-                            nodeToNodeValue[l*operatorDim+3]
-                                += elemCoef[j][1] * elemCoef[k][0] * 1.25;
-                            nodeToNodeValue[l*operatorDim+4]
-                                += elemCoef[j][0] * elemCoef[k][0]
-                                 + elemCoef[j][1] * elemCoef[k][1] * 2.25
-                                 + elemCoef[j][2] * elemCoef[k][2];
-                            nodeToNodeValue[l*operatorDim+5]
-                                += elemCoef[j][1] * elemCoef[k][2] * 1.25;
-                            nodeToNodeValue[l*operatorDim+6]
-                                += elemCoef[j][2] * elemCoef[k][0] * 1.25;
-                            nodeToNodeValue[l*operatorDim+7]
-                                += elemCoef[j][2] * elemCoef[k][1] * 1.25;
-                            nodeToNodeValue[l*operatorDim+8]
-                                += elemCoef[j][0] * elemCoef[k][0]
-                                 + elemCoef[j][1] * elemCoef[k][1]
-                                 + elemCoef[j][2] * elemCoef[k][2] * 2.25;
-            				break;
-            			}
-            		}
-            	}
-            }
-        #endif
-    }
-}
-
-#ifdef DC_HYBRID
 // Vectorial version of laplacian assembly on a given element interval
-void assembly_lap_vec (void *userArgs, int firstElem, int lastElem)
+void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
 {
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
@@ -332,6 +198,18 @@ void assembly_lap_vec (void *userArgs, int firstElem, int lastElem)
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
+    int operatorDim         = tmpArgs->operatorDim;
+
+    // Get D&C arguments
+    int firstElem = DCargs->firstElem,
+        lastElem  = DCargs->lastElem;
+
+    // If leaf is not a separator, reset locally the CSR matrix
+    if (DCargs->isSep == 0) {
+        int firstEdge = DCargs->firstEdge * operatorDim;
+        int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+        nodeToNodeValue[firstEdge:lastEdge] = 0;
+    }
 
     // For each block of VEC_SIZE elements in the interval
     for (int elem = firstElem; elem <= lastElem; elem += VEC_SIZE) {
@@ -435,8 +313,12 @@ void assembly_lap_vec (void *userArgs, int firstElem, int lastElem)
 }
 #endif
 
-// Sequential version of laplacian assembly on a given element interval
-void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
+// Sequential version of elasticity assembly on a given element interval
+#if defined (DC) || defined (DC_HYBRID)
+void assembly_ela_seq (void *userArgs, DCargs_t *DCargs)
+#else
+void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
+#endif
 {
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
@@ -446,6 +328,178 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
+    int operatorDim         = tmpArgs->operatorDim;
+
+    #if defined (DC) || defined (DC_HYBRID)
+        // Get D&C arguments
+        int firstElem = DCargs->firstElem,
+            lastElem  = DCargs->lastElem;
+    #endif
+    #ifdef DC
+        // If leaf is not a separator, reset locally the CSR matrix
+        if (DCargs->isSep == 0) {
+            int firstEdge = DCargs->firstEdge * operatorDim;
+            int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+            nodeToNodeValue[firstEdge:lastEdge] = 0;
+        }
+    #endif
+
+    #ifdef COLORING
+        // For each element of the interval in parallel
+        #ifdef OMP
+            //#pragma omp parallel for  // Disable because of a bug
+            for (int elem = firstElem; elem <= lastElem; elem++) {
+        #elif CILK
+            cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
+        #endif
+    #else
+        // For each element of the interval in sequential
+        for (int elem = firstElem; elem <= lastElem; elem++) {
+    #endif
+        double elemCoef[DIM_ELEM][DIM_NODE];
+        double xa, xb, xc, ya, yb, yc, za, zb, zc, vol;
+
+        // Compute element coefficient sequentially
+        for (int i = 0; i < DIM_ELEM; i++) {
+            int node = elemToNode[elem*DIM_ELEM+i] - 1;
+            for (int j = 0; j < DIM_NODE; j++) {
+                elemCoef[i][j] = coord[node*DIM_NODE+j];
+            }
+        }
+
+        xa = elemCoef[0][0] - elemCoef[3][0];
+        xb = elemCoef[2][0] - elemCoef[3][0];
+        xc = elemCoef[1][0] - elemCoef[3][0];
+        ya = elemCoef[0][1] - elemCoef[3][1];
+        yb = elemCoef[2][1] - elemCoef[3][1];
+        yc = elemCoef[1][1] - elemCoef[3][1];
+        za = elemCoef[0][2] - elemCoef[3][2];
+        zb = elemCoef[2][2] - elemCoef[3][2];
+        zc = elemCoef[1][2] - elemCoef[3][2];
+        elemCoef[0][0] = yb * zc - yc * zb;
+        elemCoef[0][1] = zb * xc - zc * xb;
+        elemCoef[0][2] = xb * yc - xc * yb;
+        elemCoef[1][0] = ya * zb - yb * za;
+        elemCoef[1][1] = za * xb - zb * xa;
+        elemCoef[1][2] = xa * yb - xb * ya;
+        elemCoef[2][0] = yc * za - ya * zc;
+        elemCoef[2][1] = zc * xa - za * xc;
+        elemCoef[2][2] = xc * ya - xa * yc;
+        elemCoef[3][0] = - (elemCoef[0][0] + elemCoef[1][0] + elemCoef[2][0]);
+        elemCoef[3][1] = - (elemCoef[0][1] + elemCoef[1][1] + elemCoef[2][1]);
+        elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
+        vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
+
+        elemCoef[:][:] *= (1. / vol);
+
+        // Optimized version with precomputed edge index
+        #ifdef OPTIMIZED
+            int ctr = 0;
+            // For each edge of current element
+            for (int i = 0; i < DIM_ELEM; i++) {
+                for (int j = 0; j < DIM_ELEM; j++) {
+                    // Get edge index & update its values
+                    int index = elemToEdge[elem*VALUES_PER_ELEM+ctr];
+                    nodeToNodeValue[index*operatorDim+0]
+                        += elemCoef[i][0] * elemCoef[j][0] * 2.25
+                         + elemCoef[i][1] * elemCoef[j][1]
+                         + elemCoef[i][2] * elemCoef[j][2];
+                    nodeToNodeValue[index*operatorDim+1]
+                        += elemCoef[i][0] * elemCoef[j][1] * 1.25;
+                    nodeToNodeValue[index*operatorDim+2]
+                        += elemCoef[i][0] * elemCoef[j][2] * 1.25;
+                    nodeToNodeValue[index*operatorDim+3]
+                        += elemCoef[i][1] * elemCoef[j][0] * 1.25;
+                    nodeToNodeValue[index*operatorDim+4]
+                        += elemCoef[i][0] * elemCoef[j][0]
+                         + elemCoef[i][1] * elemCoef[j][1] * 2.25
+                         + elemCoef[i][2] * elemCoef[j][2];
+                    nodeToNodeValue[index*operatorDim+5]
+                        += elemCoef[i][1] * elemCoef[j][2] * 1.25;
+                    nodeToNodeValue[index*operatorDim+6]
+                        += elemCoef[i][2] * elemCoef[j][0] * 1.25;
+                    nodeToNodeValue[index*operatorDim+7]
+                        += elemCoef[i][2] * elemCoef[j][1] * 1.25;
+                    nodeToNodeValue[index*operatorDim+8]
+                        += elemCoef[i][0] * elemCoef[j][0]
+                         + elemCoef[i][1] * elemCoef[j][1]
+                         + elemCoef[i][2] * elemCoef[j][2] * 2.25;
+                    ctr++;
+                }
+            }
+        #else
+            // For each edge of current element
+            for (int j = 0; j < DIM_ELEM; j++) {
+              	int node1 = elemToNode[elem*DIM_ELEM+j] - 1;
+            	for (int k = 0; k < DIM_ELEM; k++) {
+              		int node2 = elemToNode[elem*DIM_ELEM+k];
+            		for (int l = nodeToNodeRow[node1];
+                             l < nodeToNodeRow[node1+1]; l++) {
+            			if (nodeToNodeColumn[l] == node2) {
+                            // Add element contribution
+                            nodeToNodeValue[l*operatorDim+0]
+                                += elemCoef[j][0] * elemCoef[k][0] * 2.25
+                                 + elemCoef[j][1] * elemCoef[k][1]
+                                 + elemCoef[j][2] * elemCoef[k][2];
+                            nodeToNodeValue[l*operatorDim+1]
+                                += elemCoef[j][0] * elemCoef[k][1] * 1.25;
+                            nodeToNodeValue[l*operatorDim+2]
+                                += elemCoef[j][0] * elemCoef[k][2] * 1.25;
+                            nodeToNodeValue[l*operatorDim+3]
+                                += elemCoef[j][1] * elemCoef[k][0] * 1.25;
+                            nodeToNodeValue[l*operatorDim+4]
+                                += elemCoef[j][0] * elemCoef[k][0]
+                                 + elemCoef[j][1] * elemCoef[k][1] * 2.25
+                                 + elemCoef[j][2] * elemCoef[k][2];
+                            nodeToNodeValue[l*operatorDim+5]
+                                += elemCoef[j][1] * elemCoef[k][2] * 1.25;
+                            nodeToNodeValue[l*operatorDim+6]
+                                += elemCoef[j][2] * elemCoef[k][0] * 1.25;
+                            nodeToNodeValue[l*operatorDim+7]
+                                += elemCoef[j][2] * elemCoef[k][1] * 1.25;
+                            nodeToNodeValue[l*operatorDim+8]
+                                += elemCoef[j][0] * elemCoef[k][0]
+                                 + elemCoef[j][1] * elemCoef[k][1]
+                                 + elemCoef[j][2] * elemCoef[k][2] * 2.25;
+            				break;
+            			}
+            		}
+            	}
+            }
+        #endif
+    }
+}
+
+// Sequential version of laplacian assembly on a given element interval
+#if defined (DC) || defined (DC_HYBRID)
+void assembly_lap_seq (void *userArgs, DCargs_t *DCargs)
+#else
+void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
+#endif
+{
+    // Get user arguments
+    userArgs_t *tmpArgs = (userArgs_t*)userArgs;
+    double *coord           = tmpArgs->coord,
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+    int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
+        *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
+        *elemToNode         = tmpArgs->elemToNode,
+        *elemToEdge         = tmpArgs->elemToEdge;
+    int operatorDim         = tmpArgs->operatorDim;
+
+    #if defined (DC) || defined (DC_HYBRID)
+        // Get D&C arguments
+        int firstElem = DCargs->firstElem,
+            lastElem  = DCargs->lastElem;
+    #endif
+    #ifdef DC
+        // If leaf is not a separator, reset locally the CSR matrix
+        if (DCargs->isSep == 0) {
+            int firstEdge = DCargs->firstEdge * operatorDim;
+            int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+            nodeToNodeValue[firstEdge:lastEdge] = 0;
+        }
+    #endif
 
     #ifdef COLORING
         // For each element of the interval in parallel
@@ -531,6 +585,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
     }
 }
 
+#ifdef COLORING
 // Iterate over the colors & execute the assembly step on the elements of a same color
 // in parallel
 void coloring_assembly (userArgs_t *userArgs, int operatorID)
@@ -552,6 +607,7 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID)
         }
     }
 }
+#endif
 
 // Call the appropriate function to perform the assembly step
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
@@ -561,7 +617,8 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     // Create the structure containing all the arguments needed for ASM
     userArgs_t userArgs = {
         coord, nodeToNodeValue,
-        nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge
+        nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
+        operatorDim
     };
 
     #ifdef REF
@@ -595,21 +652,17 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
             #ifdef DC_HYBRID
-                DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs,
-                                   nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs);
             #else
-                DC_tree_traversal (assembly_lap_seq, nullptr, &userArgs,
-                                   nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_lap_seq, nullptr, &userArgs);
             #endif
         }
         // Using elasticity operator
         else {
             #ifdef DC_HYBRID
-                DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs,
-                                   nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs);
             #else
-                DC_tree_traversal (assembly_ela_seq, nullptr, &userArgs,
-                                   nodeToNodeValue, operatorDim);
+                DC_tree_traversal (assembly_ela_seq, nullptr, &userArgs);
             #endif
         }
     #endif
