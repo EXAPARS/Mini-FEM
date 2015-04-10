@@ -24,24 +24,31 @@ void ela_invert_prec_ (int *dimNode, int *nbNodes, int *nodeToNodeIndex,
                        int *checkBounds, int *curNode);
 
 // Create preconditioner for elasticity operator
-void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
-                         int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                         int *intfNodes, int *neighborList, int *checkBounds,
-                         int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                         int operatorDim, int operatorID, int rank);
+void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                         int *neighborList, int *checkBounds, int nbNodes,
+                         int nbBlocks, int nbIntf, int nbIntfNodes, int operatorDim,
+                         int operatorID, int rank);
 
 // Create preconditioner for laplacian operator
-void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
-                         int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                         int *intfNodes, int *neighborList, int nbNodes, int nbBlocks,
-                         int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-                         int rank);
+void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                         int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+                         int nbIntfNodes, int operatorDim, int operatorID, int rank);
 
 // Call the appropriate function to create the preconditioner
-void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
-                     int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                     int *intfNodes, int *neighborList, int *checkBounds,
-                     int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                     int operatorDim, int operatorID, int rank);
+void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                     int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                     int *neighborList, int *checkBounds, int nbNodes, int nbBlocks,
+                     int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
+#ifdef GASPI
+                     int rank, gaspi_pointer_t srcSegmentPtr,
+                     gaspi_pointer_t destSegmentPtr,
+                     const gaspi_segment_id_t srcSegmentID,
+                     const gaspi_segment_id_t destSegmentID,
+                     const gaspi_queue_id_t queueID);
+#else
+                     int rank);
+#endif
 
 #endif

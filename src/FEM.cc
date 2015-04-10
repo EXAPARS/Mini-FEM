@@ -80,7 +80,20 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int nbEdges, int nbIntf, int nbIntfNodes, int nbIter,
                int nbBlocks, int rank, int operatorDim, int operatorID)
 {
-    double *buffer = new double [max (2*nbIntfNodes*DIM_NODE*operatorDim, 1)];
+    // Creation of the GASPI segments
+    #ifdef GASPI
+        gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
+        const gaspi_size_t segmentSize = 2*nbIntfNodes * operatorDim * sizeof (double);
+        const gaspi_segment_id_t srcSegmentID = 0, destSegmentID = 1;
+        const gaspi_queue_id_t queueID = 0;
+
+        gaspi_segment_create (srcSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
+                              GASPI_ALLOC_DEFAULT);
+        gaspi_segment_create (destSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
+                              GASPI_ALLOC_DEFAULT);
+        gaspi_segment_ptr (srcSegmentID, &srcSegmentPtr);
+        gaspi_segment_ptr (destSegmentID, &destSegmentPtr);
+    #endif
 
     #ifdef VTUNE
     	__itt_pause ();
@@ -124,10 +137,15 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 
 		// Preconditioner creation
         p1 = DC_get_cycles ();
-        preconditioner (prec, buffer, nodeToNodeValue, nodeToNodeRow,
-                        nodeToNodeColumn, intfIndex, intfNodes, neighborList,
-                        checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
-                        operatorDim, operatorID, rank);
+        preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                        intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
+                        nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
+        #ifdef GASPI
+                        , srcSegmentPtr, destSegmentPtr, srcSegmentID, destSegmentID,
+                        queueID);
+        #else
+                        );
+        #endif
         p2 = DC_get_cycles ();
         localElapsed = p2 - p1;
         #ifdef XMPI
@@ -166,5 +184,11 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         m->cleanup ();
     #endif
 
-    delete[] buffer;
+    // Free GASPI segments
+    #ifdef GASPI
+        gaspi_wait (queueID, GASPI_BLOCK);
+        gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
+        gaspi_segment_delete (srcSegmentID);
+        gaspi_segment_delete (destSegmentID);
+    #endif
 }

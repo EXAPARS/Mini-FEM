@@ -17,6 +17,10 @@
 #ifndef HALO_H
 #define HALO_H
 
+#ifdef GASPI
+    #include <GASPI.h>
+#endif
+
 #ifdef XMPI
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
@@ -26,7 +30,11 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                           int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                          int nbIntfNodes, int operatorDim, int operatorID, int rank);
+                          int nbIntfNodes, int operatorDim, int operatorID, int rank,
+                          gaspi_pointer_t srcSegmentPtr, gaspi_pointer_t destSegmentPtr,
+                          const gaspi_segment_id_t srcSegmentID,
+                          const gaspi_segment_id_t destSegmentID,
+                          const gaspi_queue_id_t queueID);
 #endif
 
 #endif

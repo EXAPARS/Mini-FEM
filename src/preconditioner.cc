@@ -14,6 +14,9 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
+#ifdef GASPI
+    #include <GASPI.h>
+#endif
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
@@ -23,11 +26,20 @@
 #include "halo.h"
 
 // Create preconditioner for elasticity operator
-void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
-                         int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                         int *intfNodes, int *neighborList, int *checkBounds,
-                         int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                         int operatorDim, int operatorID, int rank)
+void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                         int *neighborList, int *checkBounds, int nbNodes,
+                         int nbBlocks, int nbIntf, int nbIntfNodes, int operatorDim,
+                         int operatorID, int rank
+#ifdef GASPI
+                         , gaspi_pointer_t srcSegmentPtr,
+                         gaspi_pointer_t destSegmentPtr,
+                         const gaspi_segment_id_t srcSegmentID,
+                         const gaspi_segment_id_t destSegmentID,
+                         const gaspi_queue_id_t queueID)
+#else
+                         )
+#endif
 {
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
@@ -58,7 +70,8 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
         #elif GASPI
             GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                  nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                                 operatorID, rank);
+                                 operatorID, rank, srcSegmentPtr, destSegmentPtr,
+                                 srcSegmentID, destSegmentID, queueID);
         #endif
     }
 
@@ -81,11 +94,19 @@ void preconditioner_ela (double *prec, double *buffer, double *nodeToNodeValue,
 }
 
 // Create preconditioner for laplacian operator
-void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
-                         int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                         int *intfNodes, int *neighborList, int nbNodes, int nbBlocks,
-                         int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-                         int rank)
+void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                         int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+                         int nbIntfNodes, int operatorDim, int operatorID, int rank
+#ifdef GASPI
+                         , gaspi_pointer_t srcSegmentPtr,
+                         gaspi_pointer_t destSegmentPtr,
+                         const gaspi_segment_id_t srcSegmentID,
+                         const gaspi_segment_id_t destSegmentID,
+                         const gaspi_queue_id_t queueID)
+#else
+                         )
+#endif
 {
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
@@ -114,7 +135,8 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
         #elif GASPI
             GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                  nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                                 operatorID, rank);
+                                 operatorID, rank, srcSegmentPtr, destSegmentPtr,
+                                 srcSegmentID, destSegmentID, queueID);
         #endif
     }
 
@@ -134,11 +156,19 @@ void preconditioner_lap (double *prec, double *buffer, double *nodeToNodeValue,
 }
 
 // Call the appropriate function to create the preconditioner
-void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
-                     int *nodeToNodeRow, int *nodeToNodeColumn, int *intfIndex,
-                     int *intfNodes, int *neighborList, int *checkBounds,
-                     int nbNodes, int nbBlocks, int nbIntf, int nbIntfNodes,
-                     int operatorDim, int operatorID, int rank)
+void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                     int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
+                     int *neighborList, int *checkBounds, int nbNodes, int nbBlocks,
+                     int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
+#ifdef GASPI
+                     int rank, gaspi_pointer_t srcSegmentPtr,
+                     gaspi_pointer_t destSegmentPtr,
+                     const gaspi_segment_id_t srcSegmentID,
+                     const gaspi_segment_id_t destSegmentID,
+                     const gaspi_queue_id_t queueID)
+#else
+                     int rank)
+#endif
 {
     // Preconditioner reset
     #ifdef REF
@@ -153,15 +183,25 @@ void preconditioner (double *prec, double *buffer, double *nodeToNodeValue,
     #endif
 
     if (operatorID == 0) {
-        preconditioner_lap (prec, buffer, nodeToNodeValue, nodeToNodeRow,
-                            nodeToNodeColumn, intfIndex, intfNodes, neighborList,
-                            nbNodes, nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                            operatorID, rank);
+        preconditioner_lap (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                            intfIndex, intfNodes, neighborList, nbNodes, nbBlocks,
+                            nbIntf, nbIntfNodes, operatorDim, operatorID, rank
+        #ifdef GASPI
+                            , srcSegmentPtr, destSegmentPtr, srcSegmentID,
+                            destSegmentID, queueID);
+        #else
+                            );
+        #endif
     }
     else {
-        preconditioner_ela (prec, buffer, nodeToNodeValue, nodeToNodeRow,
-                            nodeToNodeColumn, intfIndex, intfNodes, neighborList,
-                            checkBounds, nbNodes, nbBlocks, nbIntf, nbIntfNodes,
-                            operatorDim, operatorID, rank);
+        preconditioner_ela (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                            intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
+                            nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID,
+        #ifdef GASPI
+                            rank, srcSegmentPtr, destSegmentPtr, srcSegmentID,
+                            destSegmentID, queueID);
+        #else
+                            rank);
+        #endif
     }
 }
