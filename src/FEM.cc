@@ -83,7 +83,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     // Creation of the GASPI segments
     #ifdef GASPI
         gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
-        const gaspi_size_t segmentSize = 2*nbIntfNodes * operatorDim * sizeof (double);
+        const gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
         const gaspi_segment_id_t srcSegmentID = 0, destSegmentID = 1;
         const gaspi_queue_id_t queueID = 0;
 
