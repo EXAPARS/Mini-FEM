@@ -31,8 +31,8 @@ CILKVIEW_INCLUDE="$HOME/Programs/CilkTools/include/cilktools"
 # Case insensitive comparisons
 shopt -s nocasematch
 
-# Check number of arguments
-if [ $# -eq 0 ]; then
+# Check the number of arguments
+if [[ $# -eq 0 ]]; then
     echo -e "\\033[1;31mPlease specify:"
     echo -e " - The code version (Ref, DC, Hybrid, or Coloring)"
     echo -e " - The distributed memory library (MPI or GASPI)"
@@ -40,7 +40,7 @@ if [ $# -eq 0 ]; then
     exit
 fi
 
-# Parse arguments
+# Parse the arguments
 DISTRI=0
 SHARED=0
 VERSION=0
