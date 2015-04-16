@@ -33,9 +33,6 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
     double *bufferSend = new double [nbIntfNodes*operatorDim];
     double *bufferRecv = new double [nbIntfNodes*operatorDim];
 
-    int MPIdataSize;
-    MPI_Type_size (MPI_DOUBLE, &MPIdataSize);
-
     // Initializing reception from adjacent domains
     for (int i = 0; i < nbIntf; i++) {
         int node1  = intfIndex[i];
@@ -45,9 +42,6 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         int tag    = neighborList[i] + 100;
         MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE, source, tag,
                    MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
-        printf ("%d : %d recvs from %d (%d - %d)\n", i, rank, source,
-                node1*operatorDim*MPIdataSize,
-                node1*operatorDim*MPIdataSize+size*MPIdataSize-1);
     }
 
     // Buffering local data with laplacian operator
@@ -82,9 +76,6 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         int tag   = rank + 101;
         MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE, dest, tag,
                   MPI_COMM_WORLD);
-        printf ("%d : %d sends to %d (%d - %d)\n", i, rank, dest,
-                node1*operatorDim*MPIdataSize,
-                node1*operatorDim*MPIdataSize+size*MPIdataSize-1);
     }
 
     // Waiting incoming data
@@ -139,12 +130,12 @@ void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         // The +1 is required since a notification value cannot be equal to 0...
         int localOffset = intfIndex[i] * operatorDim * sizeof (double) + 1;
         int dest = neighborList[i] - 1;
-        gaspi_return_t check = gaspi_notify (destSegmentID, dest, rank, localOffset,
-                                             queueID, GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Notify error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+        gaspi_return_t check = gaspi_notify (destSegmentID, dest, nbBlocks+rank,
+                                             localOffset, queueID, GASPI_BLOCK);
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Notify error during offset exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
     }
 
     // For each interface
@@ -178,84 +169,64 @@ void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         }
 
         // Receives the destination offset from adjacent domain
-        check = gaspi_notify_waitsome (destSegmentID, neighbor, 1, &recvNotifyID,
-                                       GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Wait error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+        check = gaspi_notify_waitsome (destSegmentID, nbBlocks+neighbor, 1,
+                                       &recvNotifyID, GASPI_BLOCK);
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Wait error during offset exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
         check = gaspi_notify_reset (destSegmentID, recvNotifyID, &destOffset);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Reset error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Reset error during offset exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
         destOffset--; // Remove the +1 of the local offset
 
         // Sends local data to adjacent domain
-        // XXXX a modifier pour ne pas que ca corresponde a l'echange des offsets 
         check = gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
-                                    destOffset, size, XXXX, 1, queueID, GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Write error during data exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
-
-        gaspi_printf ("%d : %d sends to %d (%d - %d)\n", i,
-                      rank, neighbor, localOffset, localOffset+size-1);
-    }
-
-    gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
-    if (rank == 0) {
-        gaspi_printf ("Sends done\n");
+                                    destOffset, size, rank, 1, queueID, GASPI_BLOCK);
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Write error during data exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
     }
 
     // For each notification from adjacent domains
-//    while (nbNotifiesLeft > 0) {
+    while (nbNotifiesLeft > 0) {
+        int recvIntf;
 
-    for (int i = 0; i < nbIntf; i++) {
-        int node1       = intfIndex[i];
-        int node2       = intfIndex[i+1];
-        int localOffset = node1 * operatorDim * sizeof (double);
-        int size        = (node2 - node1) * operatorDim * sizeof (double);
-        int source      = neighborList[i] - 1;
+//    for (int i = 0; i < nbIntf; i++) {
+//        int source = neighborList[i] - 1;
 
         gaspi_notification_t recvNotifyValue;
         gaspi_notification_id_t recvNotifyID;
         gaspi_return_t check;
-//        int recvIntf;
 
         // Wait & reset the first incoming notification
-//        check = gaspi_notify_waitsome (destSegmentID, 0, nbBlocks, &recvNotifyID,
-//                                       GASPI_BLOCK);
-        check = gaspi_notify_waitsome (destSegmentID, source, 1, &recvNotifyID,
+        check = gaspi_notify_waitsome (destSegmentID, 0, nbBlocks, &recvNotifyID,
                                        GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Wait error during data exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+//        check = gaspi_notify_waitsome (destSegmentID, source, 1, &recvNotifyID,
+//                                       GASPI_BLOCK);
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Wait error during data exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
         check = gaspi_notify_reset (destSegmentID, recvNotifyID, &recvNotifyValue);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Reset error during data exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
-//        nbNotifiesLeft--;
+//        if (check != GASPI_SUCCESS) {
+//            cerr << "Reset error during data exchange from rank " << rank << endl;
+//            exit (EXIT_FAILURE);
+//        }
+        nbNotifiesLeft--;
 
         // Look for the interface corresponding to the source rank
-//        for (recvIntf = 0; recvIntf < nbIntf; recvIntf++) {
-//            if ((neighborList[recvIntf]-1) == recvNotifyID) break;
-//        }
-
-//        int node1  = intfIndex[recvIntf];
-//        int node2  = intfIndex[recvIntf+1];
-//        gaspi_printf ("%d : %d recvs from %d (offset: %d - size: %d)\n",
-//                      nbNotifiesLeft, rank, recvNotifyID, localOffset, size);
-        gaspi_printf ("%d : %d recvs from %d (%d - %d)\n",
-                      i, rank, recvNotifyID, localOffset, localOffset+size-1);
+        for (recvIntf = 0; recvIntf < nbIntf; recvIntf++) {
+            if ((neighborList[recvIntf]-1) == recvNotifyID) break;
+        }
 
         // Assembling local and incoming data with laplacian operator
         if (operatorID == 0) {
-            //for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+            for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
+            //for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
                 int tmpNode = intfNodes[j] - 1;
                 for (int k = 0; k < operatorDim; k++) {
                     prec[k*operatorDim+tmpNode] += destSegment[j*operatorDim+k];
@@ -264,8 +235,8 @@ void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         }
         // Elasticity operator
         else {
-            //for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+            for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
+            //for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
                 int tmpNode = intfNodes[j] - 1;
                 for (int k = 0; k < operatorDim; k++) {
                     prec[tmpNode*operatorDim+k] += destSegment[j*operatorDim+k];

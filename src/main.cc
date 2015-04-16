@@ -45,7 +45,7 @@ int nbTotalColors;
 
 // Help message
 void help () {
-	cout << "Please specify:\n"
+	cerr << "Please specify:\n"
 		 << " 1. The test case: LM6, EIB or FGN.\n"
 		 << " 2. The operator: lap or ela.\n"
 		 << " 3. The number of iterations.\n";
@@ -55,26 +55,29 @@ void help () {
 void check_args (int argCount, char **argValue, int *nbIter, int rank)
 {
     if (argCount < 4) {
-        help ();
+        if (rank == 0) help ();
         exit (EXIT_FAILURE);
     }
     meshName = argValue[1];
     if (meshName.compare ("LM6") && meshName.compare ("EIB") &&
-        meshName.compare ("FGN") && rank == 0) {
-		cerr << "Incorrect argument \"" << meshName << "\".\n";
-		help ();
+        meshName.compare ("FGN")) {
+        if (rank == 0) {
+		    cerr << "Incorrect argument \"" << meshName << "\".\n";
+		    help ();
+        }
 		exit (EXIT_FAILURE);
 	}
 	operatorName = argValue[2];
-	if (operatorName.compare ("lap") && operatorName.compare ("ela") &&
-        rank == 0) {
-		cerr << "Incorrect argument \"" << operatorName << "\".\n";
-		help ();
+	if (operatorName.compare ("lap") && operatorName.compare ("ela")) {
+        if (rank == 0) {
+		    cerr << "Incorrect argument \"" << operatorName << "\".\n";
+		    help ();
+        }
 		exit (EXIT_FAILURE);
 	}
 	*nbIter = strtol (argValue[3], nullptr, 0);
-	if (*nbIter < 1 && rank == 0) {
-		cerr << "Number of iterations must be at least 1.\n";
+	if (*nbIter < 1) {
+        if (rank == 0) cerr << "Number of iterations must be at least 1.\n";
 		exit (EXIT_FAILURE);
 	}
 }
