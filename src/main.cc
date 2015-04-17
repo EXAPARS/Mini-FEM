@@ -18,6 +18,7 @@
     #include <mpi.h>
 #elif GASPI
     #include <GASPI.h>
+    #include "GASPI_handler.h"
 #endif
 #include <iostream>
 #include <iomanip>
@@ -87,19 +88,19 @@ int main (int argCount, char **argValue)
 	// Process initialization
 	int nbBlocks = 0, rank = 0;
     #ifdef XMPI
-	    MPI_Init (&argCount, &argValue);
-	    MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
-	    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
+        MPI_Init (&argCount, &argValue);
+        MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
+        MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
         gaspi_proc_init (GASPI_BLOCK);
         gaspi_proc_num ((gaspi_rank_t*)&nbBlocks);
         gaspi_proc_rank ((gaspi_rank_t*)&rank);
     #endif
 
-	// Arguments initialization
-	int nbIter;
+    // Arguments initialization
+    int nbIter;
     check_args (argCount, argValue, &nbIter, rank);
-	if (rank == 0) {
+    if (rank == 0) {
         cout << "\t\t* Mini-App *\n\n"
         	 << "Test case              : \"" << meshName << "\"\n"
         	 << "Operator               : \"" << operatorName << "\"\n"
@@ -195,7 +196,6 @@ int main (int argCount, char **argValue)
             t2 = DC_get_time ();
         	cout << "done  (" << t2 - t1 << " seconds)\n";
         }
-
     // Mesh coloring version
     #elif COLORING
         // Create the coloring
@@ -289,19 +289,45 @@ int main (int argCount, char **argValue)
 	e_essbcm_ (&dimNode, &nbNodes, &nbBoundNodes, boundNodesList,
 			   boundNodesCode, checkBounds);
 	delete[] boundNodesList, delete[] boundNodesCode;
-
-    // Main loop with assembly, solver & update
     if (rank == 0) {
         t2 = DC_get_time ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
-        cout << "\nMain FEM loop...\n";
     }
+
+    // Initialization of the GASPI library
+    #ifdef GASPI
+        if (rank == 0) {
+            cout << "Initializing GASPI lib...            ";
+            t1 = DC_get_time ();
+        }
+        double *srcSegment = NULL, *destSegment = NULL;
+	    int *destOffset = new int [nbIntf];
+        gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
+        gaspi_segment_id_t srcSegmentID, destSegmentID;
+        gaspi_queue_id_t queueID;
+        GASPI_init (&srcSegment, &destSegment, segmentSize, &srcSegmentID,
+                    &destSegmentID, &queueID, rank);
+        GASPI_offset_exchange (destOffset, intfIndex, neighborList, nbIntf, nbBlocks,
+                               rank, operatorDim, destSegmentID, queueID);
+        if (rank == 0) {
+            t2 = DC_get_time ();
+            cout << "done  (" << t2 - t1 << " seconds)\n";
+        }
+    #endif
+
+    // Main loop with assembly, solver & update
+    if (rank == 0) cout << "\nMain FEM loop...\n";
     nodeToNodeValue = new double [nbEdges * operatorDim];
     prec            = new double [nbNodes * operatorDim];
 	FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-              elemToNode, elemToEdge, intfIndex, intfNodes, neighborList,
-              checkBounds, nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes,
-              nbIter, nbBlocks, rank, operatorDim, operatorID);
+              elemToNode, elemToEdge, intfIndex, intfNodes, neighborList, checkBounds,
+              nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbIter, nbBlocks, rank,
+    #ifdef XMPI
+              operatorDim, operatorID);
+    #elif GASPI
+              operatorDim, operatorID, srcSegment, destSegment, destOffset,
+              srcSegmentID, destSegmentID, queueID);
+    #endif
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
     delete[] neighborList, delete[] intfNodes, delete[] intfIndex;
     delete[] coord, delete[] elemToNode;
@@ -319,6 +345,7 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
 	    MPI_Finalize ();
     #elif GASPI
+        GASPI_finalize (destOffset, rank, srcSegmentID, destSegmentID, queueID);
         gaspi_proc_term (GASPI_BLOCK);
     #endif
 

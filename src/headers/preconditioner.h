@@ -17,6 +17,10 @@
 #ifndef PRECOND_H
 #define PRECOND_H
 
+#ifdef GASPI
+    #include <GASPI.h>
+#endif
+
 // External preconditioner Fortran functions
 extern "C"
 void ela_invert_prec_ (int *dimNode, int *nbNodes, int *nodeToNodeIndex,
@@ -28,27 +32,40 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                          int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
                          int *neighborList, int *checkBounds, int nbNodes,
                          int nbBlocks, int nbIntf, int nbIntfNodes, int operatorDim,
-                         int operatorID, int rank);
+                         int operatorID, int rank
+#ifdef XMPI
+                         );
+#elif GASPI
+                         , double *srcSegment, double *destSegment, int *destOffset,
+                         gaspi_segment_id_t srcSegmentID,
+                         gaspi_segment_id_t destSegmentID,
+                         gaspi_queue_id_t queueID);
+#endif
 
 // Create preconditioner for laplacian operator
 void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
                          int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
                          int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                         int nbIntfNodes, int operatorDim, int operatorID, int rank);
+                         int nbIntfNodes, int operatorDim, int operatorID, int rank
+#ifdef XMPI
+                         );
+#elif GASPI
+                         , double *srcSegment, double *destSegment, int *destOffset,
+                         gaspi_segment_id_t srcSegmentID,
+                         gaspi_segment_id_t destSegmentID,
+                         gaspi_queue_id_t queueID);
+#endif
 
 // Call the appropriate function to create the preconditioner
 void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
                      int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
                      int *neighborList, int *checkBounds, int nbNodes, int nbBlocks,
                      int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-#ifdef GASPI
-                     int rank, gaspi_pointer_t srcSegmentPtr,
-                     gaspi_pointer_t destSegmentPtr,
-                     const gaspi_segment_id_t srcSegmentID,
-                     const gaspi_segment_id_t destSegmentID,
-                     const gaspi_queue_id_t queueID);
-#else
+#ifdef XMPI
                      int rank);
+#elif GASPI
+                     int rank, double *srcSegment, double *destSegment,
+                     int *destOffset, gaspi_segment_id_t srcSegmentID,
+                     gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
 #endif
-
 #endif

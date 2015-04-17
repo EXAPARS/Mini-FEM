@@ -16,8 +16,6 @@
 
 #ifdef XMPI
     #include <mpi.h>
-#elif GASPI
-    #include <GASPI.h>
 #endif
 #include <iostream>
 #include <cmath>
@@ -75,26 +73,17 @@ void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbN
 // Main loop iterating over the 3 main steps of FEM applications
 void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNode,
-               int *elemToEdge, int *intfIndex, int *intfNodes,
-               int *neighborList, int *checkBounds, int nbElem, int nbNodes,
-               int nbEdges, int nbIntf, int nbIntfNodes, int nbIter,
-               int nbBlocks, int rank, int operatorDim, int operatorID)
+               int *elemToEdge, int *intfIndex, int *intfNodes, int *neighborList,
+               int *checkBounds, int nbElem, int nbNodes, int nbEdges, int nbIntf,
+               int nbIntfNodes, int nbIter, int nbBlocks, int rank, int operatorDim,
+#ifdef XMPI
+               int operatorID)
+#elif GASPI
+               int operatorID, double *srcSegment, double *destSegment,
+               int *destOffset, gaspi_segment_id_t srcSegmentID,
+               gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
+#endif
 {
-    // Creation of the GASPI segments
-    #ifdef GASPI
-        gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
-        const gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
-        const gaspi_segment_id_t srcSegmentID = 0, destSegmentID = 1;
-        const gaspi_queue_id_t queueID = 0;
-
-        gaspi_segment_create (srcSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
-                              GASPI_ALLOC_DEFAULT);
-        gaspi_segment_create (destSegmentID, segmentSize, GASPI_GROUP_ALL, GASPI_BLOCK,
-                              GASPI_ALLOC_DEFAULT);
-        gaspi_segment_ptr (srcSegmentID, &srcSegmentPtr);
-        gaspi_segment_ptr (destSegmentID, &destSegmentPtr);
-    #endif
-
     #ifdef VTUNE
     	__itt_pause ();
     #elif CILKVIEW
@@ -140,11 +129,11 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
                         intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
                         nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
-        #ifdef GASPI
-                        , srcSegmentPtr, destSegmentPtr, srcSegmentID, destSegmentID,
-                        queueID);
-        #else
+        #ifdef XMPI
                         );
+        #elif GASPI
+                        , srcSegment, destSegment, destOffset, srcSegmentID,
+                        destSegmentID, queueID);
         #endif
         p2 = DC_get_cycles ();
         localElapsed = p2 - p1;
@@ -182,13 +171,5 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
              << "\n  Bytes written to MC : " << getBytesWrittenToMC (pcmStart, pcmStop)
              << endl;
         m->cleanup ();
-    #endif
-
-    // Free GASPI segments
-    #ifdef GASPI
-        gaspi_wait (queueID, GASPI_BLOCK);
-        gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
-        gaspi_segment_delete (srcSegmentID);
-        gaspi_segment_delete (destSegmentID);
     #endif
 }

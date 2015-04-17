@@ -31,7 +31,7 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                           int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
                           int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          gaspi_pointer_t srcSegmentPtr, gaspi_pointer_t destSegmentPtr,
+                          double *srcSegment, double *destSegment, int *destOffset,
                           const gaspi_segment_id_t srcSegmentID,
                           const gaspi_segment_id_t destSegmentID,
                           const gaspi_queue_id_t queueID);

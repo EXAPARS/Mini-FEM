@@ -17,6 +17,10 @@
 #ifndef FEM_H
 #define FEM_H
 
+#ifdef GASPI
+    #include <GASPI.h>
+#endif
+
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size);
 
@@ -27,9 +31,14 @@ void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges,
 // Main loop iterating over the 3 main steps of FEM applications
 void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNode,
-               int *elemToEdge, int *intfIndex, int *intfNodes,
-               int *neighborList, int *checkBounds, int nbElem, int nbNodes,
-               int nbEdges, int nbIntf, int nbIntfNodes, int nbIter,
-               int nbBlocks, int rank, int operatorDim, int operatorID);
-
+               int *elemToEdge, int *intfIndex, int *intfNodes, int *neighborList,
+               int *checkBounds, int nbElem, int nbNodes, int nbEdges, int nbIntf,
+               int nbIntfNodes, int nbIter, int nbBlocks, int rank, int operatorDim,
+#ifdef XMPI
+               int operatorID);
+#elif GASPI
+               int operatorID, double *srcSegment, double *destSegment,
+               int *destOffset, gaspi_segment_id_t srcSegmentID,
+               gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
+#endif
 #endif

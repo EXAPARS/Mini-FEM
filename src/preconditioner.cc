@@ -14,16 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifdef GASPI
-    #include <GASPI.h>
-#endif
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
 
 #include "globals.h"
-#include "preconditioner.h"
 #include "halo.h"
+#include "preconditioner.h"
 
 // Create preconditioner for elasticity operator
 void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
@@ -31,14 +28,13 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                          int *neighborList, int *checkBounds, int nbNodes,
                          int nbBlocks, int nbIntf, int nbIntfNodes, int operatorDim,
                          int operatorID, int rank
-#ifdef GASPI
-                         , gaspi_pointer_t srcSegmentPtr,
-                         gaspi_pointer_t destSegmentPtr,
-                         const gaspi_segment_id_t srcSegmentID,
-                         const gaspi_segment_id_t destSegmentID,
-                         const gaspi_queue_id_t queueID)
-#else
+#ifdef XMPI
                          )
+#elif GASPI
+                         , double *srcSegment, double *destSegment, int *destOffset,
+                         gaspi_segment_id_t srcSegmentID,
+                         gaspi_segment_id_t destSegmentID,
+                         gaspi_queue_id_t queueID)
 #endif
 {
 	// Copy matrix diagonal into preconditioner
@@ -70,7 +66,7 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         #elif GASPI
             GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                  nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                                 operatorID, rank, srcSegmentPtr, destSegmentPtr,
+                                 operatorID, rank, srcSegment, destSegment, destOffset,
                                  srcSegmentID, destSegmentID, queueID);
         #endif
     }
@@ -98,14 +94,13 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                          int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
                          int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
                          int nbIntfNodes, int operatorDim, int operatorID, int rank
-#ifdef GASPI
-                         , gaspi_pointer_t srcSegmentPtr,
-                         gaspi_pointer_t destSegmentPtr,
-                         const gaspi_segment_id_t srcSegmentID,
-                         const gaspi_segment_id_t destSegmentID,
-                         const gaspi_queue_id_t queueID)
-#else
+#ifdef XMPI
                          )
+#elif GASPI
+                         , double *srcSegment, double *destSegment, int *destOffset,
+                         gaspi_segment_id_t srcSegmentID,
+                         gaspi_segment_id_t destSegmentID,
+                         gaspi_queue_id_t queueID)
 #endif
 {
 	// Copy matrix diagonal into preconditioner
@@ -135,7 +130,7 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         #elif GASPI
             GASPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                  nbBlocks, nbIntf, nbIntfNodes, operatorDim,
-                                 operatorID, rank, srcSegmentPtr, destSegmentPtr,
+                                 operatorID, rank, srcSegment, destSegment, destOffset,
                                  srcSegmentID, destSegmentID, queueID);
         #endif
     }
@@ -160,14 +155,12 @@ void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
                      int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
                      int *neighborList, int *checkBounds, int nbNodes, int nbBlocks,
                      int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-#ifdef GASPI
-                     int rank, gaspi_pointer_t srcSegmentPtr,
-                     gaspi_pointer_t destSegmentPtr,
-                     const gaspi_segment_id_t srcSegmentID,
-                     const gaspi_segment_id_t destSegmentID,
-                     const gaspi_queue_id_t queueID)
-#else
+#ifdef XMPI
                      int rank)
+#elif GASPI
+                     int rank, double *srcSegment, double *destSegment,
+                     int *destOffset, gaspi_segment_id_t srcSegmentID,
+                     gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
     // Preconditioner reset
@@ -186,22 +179,22 @@ void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
         preconditioner_lap (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
                             intfIndex, intfNodes, neighborList, nbNodes, nbBlocks,
                             nbIntf, nbIntfNodes, operatorDim, operatorID, rank
-        #ifdef GASPI
-                            , srcSegmentPtr, destSegmentPtr, srcSegmentID,
-                            destSegmentID, queueID);
-        #else
+        #ifdef XMPI
                             );
+        #elif GASPI
+                            , srcSegment, destSegment, destOffset, srcSegmentID,
+                            destSegmentID, queueID);
         #endif
     }
     else {
         preconditioner_ela (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
                             intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
                             nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID,
-        #ifdef GASPI
-                            rank, srcSegmentPtr, destSegmentPtr, srcSegmentID,
-                            destSegmentID, queueID);
-        #else
+        #ifdef XMPI
                             rank);
+        #elif GASPI
+                            rank, srcSegment, destSegment, destOffset, srcSegmentID,
+                            destSegmentID, queueID);
         #endif
     }
 }
