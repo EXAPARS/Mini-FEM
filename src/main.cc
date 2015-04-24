@@ -110,6 +110,7 @@ int main (int argCount, char **argValue)
     }
 
 	// Declarations
+	DC_timer timer;
     index_t nodeToElem;
 	double *coord, *nodeToNodeValue, *prec;
 	double t1, t2;
@@ -132,6 +133,7 @@ int main (int argCount, char **argValue)
     // Get the input data from DefMesh
 	if (rank == 0) {
         cout << "Reading input data...                ";
+        timer.time_start ();
         t1 = DC_get_time ();
     }
 	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
@@ -139,7 +141,10 @@ int main (int argCount, char **argValue)
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
         t2 = DC_get_time ();
+        timer.time_stop ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
+        cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+        cout << "done  (" << timer.get_avg_cycles () << " cycles)\n";
     }
 
     // D&C version
