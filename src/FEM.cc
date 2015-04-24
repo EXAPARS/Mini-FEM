@@ -53,20 +53,20 @@ double compute_double_norm (double *tab, int size)
 void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
                      int operatorDim, int nbBlocks, int rank)
 {
-	double refMatrixNorm, refPrecNorm, MatrixNorm, precNorm;
-	read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, rank);
-	MatrixNorm = compute_double_norm (nodeToNodeValue, nbEdges*operatorDim);
-	precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
+    double refMatrixNorm, refPrecNorm, MatrixNorm, precNorm;
+    read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, rank);
+    MatrixNorm = compute_double_norm (nodeToNodeValue, nbEdges*operatorDim);
+    precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
 
     if (rank == 0) {
-	    cout << "Matrix -> reference norm : " << refMatrixNorm << endl
-	    	 << "            current norm : " << MatrixNorm << endl
-	    	 << "              difference : " << abs (refMatrixNorm-MatrixNorm)
-	    	 << endl << endl;
-	    cout << "  Prec -> reference norm : " << refPrecNorm << endl
-	    	 << "            current norm : " << precNorm << endl
-	    	 << "              difference : " << abs (refPrecNorm - precNorm)
-	    	 << endl;
+        cout << "Matrix -> reference norm : " << refMatrixNorm << endl
+        	 << "            current norm : " << MatrixNorm << endl
+        	 << "              difference : " << abs (refMatrixNorm-MatrixNorm)
+        	 << endl << endl;
+        cout << "  Prec -> reference norm : " << refPrecNorm << endl
+        	 << "            current norm : " << precNorm << endl
+        	 << "              difference : " << abs (refPrecNorm - precNorm)
+        	 << endl;
     }
 }
 
@@ -103,38 +103,13 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     #endif
 
     // Main FEM loop
-	for (int iter = 1; iter <= nbIter; iter++) {
-		uint64_t p1, p2, localElapsed, globalElapsed;
-
-		// Matrix assembly
-	    p1 = DC_get_cycles ();
+    for (int iter = 1; iter <= nbIter; iter++) {
+        uint64_t p1, p2, localElapsed, globalElapsed;
+        
+        // Matrix assembly
+        p1 = DC_get_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
-	    p2 = DC_get_cycles ();
-        localElapsed = p2 - p1;
-        #ifdef XMPI
-            MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                        MPI_COMM_WORLD);
-        #elif GASPI
-            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-        #endif
-		if (rank == 0) {
-	        cout << iter << ". Matrix assembly         : " << globalElapsed
-                 << " cycles\n";
-		}
-
-		// Preconditioner creation
-        p1 = DC_get_cycles ();
-        preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-                        intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
-                        nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
-        #ifdef XMPI
-                        );
-        #elif GASPI
-                        , srcSegment, destSegment, destOffset, srcSegmentID,
-                        destSegmentID, queueID);
-        #endif
         p2 = DC_get_cycles ();
         localElapsed = p2 - p1;
         #ifdef XMPI
@@ -145,10 +120,35 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                              GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
         #endif
         if (rank == 0) {
-            cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
-            if (iter != nbIter) cout << endl;
+            cout << iter << ". Matrix assembly         : " << globalElapsed
+                 << " cycles\n";
         }
-	}
+
+        // Preconditioner creation
+//        p1 = DC_get_cycles ();
+        preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                        intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
+                        nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
+        #ifdef XMPI
+                        );
+        #elif GASPI
+                        , srcSegment, destSegment, destOffset, srcSegmentID,
+                        destSegmentID, queueID);
+        #endif
+//        p2 = DC_get_cycles ();
+//        localElapsed = p2 - p1;
+//        #ifdef XMPI
+//            MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
+//                        MPI_COMM_WORLD);
+//        #elif GASPI
+//            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
+//                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+//        #endif
+//        if (rank == 0) {
+//            cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
+//            if (iter != nbIter) cout << endl;
+//        }
+    }
 
     #ifdef VTUNE
     	__itt_resume ();

@@ -6,12 +6,12 @@ MACHINE_FILE=$EXE_DIR/GASPI_machine_file
 EXE_FILE=$EXE_DIR/GASPI_exe.sh
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
-NB_ITERATIONS=50
+NB_ITERATIONS=1
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
-for DISTRI in 'GASPI' 'XMPI'
+for DISTRI in 'XMPI' #'GASPI' 'XMPI'
 do
     # Set the environment
     if [ $DISTRI == "GASPI" ]; then
@@ -23,7 +23,7 @@ do
 
     for SHARED in 'CILK' #'OMP'
     do
-        for VERSION in 'REF' #'DC' 'DC_HYBRID' 'COLORING_OMP'
+        for VERSION in 'DC_TreeCreation' #'REF' 'DC' #'DC_HYBRID' 'COLORING_OMP'
         do
             echo -e "\n$VERSION version using $DISTRI and $SHARED"
             BINARY=$EXE_DIR/bin/miniFEM_$DISTRI\_$SHARED\_$VERSION
@@ -44,7 +44,7 @@ do
                     export elemPerPart=$PART_SIZE
                	    echo -e "\n$OPERATOR operator, $PART_SIZE elements max per partition"
 
-                    for NB_PROCESS in 16 #1 4 8 12 16
+                    for NB_PROCESS in 32 64 #1 4 8 12 16
                     do
                         for NB_THREADS in 1 #2 4 8 12 16
                         do

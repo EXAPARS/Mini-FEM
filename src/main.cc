@@ -278,17 +278,17 @@ int main (int argCount, char **argValue)
     #endif
 
     // Compute the boundary conditions
-	if (rank == 0) {
-	    cout << "Computing boundary conditions...     ";
-	    t1 = DC_get_time ();
+    if (rank == 0) {
+        cout << "Computing boundary conditions...     ";
+        t1 = DC_get_time ();
     }
     int dimNode = DIM_NODE;
-	boundNodesList = new int [nbBoundNodes];
-	checkBounds    = new int [nbNodes * DIM_NODE];
-	dqmrd4_ (&nbNodes, boundNodesCode, &nbBoundNodes, boundNodesList, &error);
-	e_essbcm_ (&dimNode, &nbNodes, &nbBoundNodes, boundNodesList,
-			   boundNodesCode, checkBounds);
-	delete[] boundNodesList, delete[] boundNodesCode;
+    boundNodesList = new int [nbBoundNodes];
+    checkBounds    = new int [nbNodes * DIM_NODE];
+    dqmrd4_ (&nbNodes, boundNodesCode, &nbBoundNodes, boundNodesList, &error);
+    e_essbcm_ (&dimNode, &nbNodes, &nbBoundNodes, boundNodesList,
+    		   boundNodesCode, checkBounds);
+    delete[] boundNodesList, delete[] boundNodesCode;
     if (rank == 0) {
         t2 = DC_get_time ();
         cout << "done  (" << t2 - t1 << " seconds)\n";
@@ -319,7 +319,7 @@ int main (int argCount, char **argValue)
     if (rank == 0) cout << "\nMain FEM loop...\n";
     nodeToNodeValue = new double [nbEdges * operatorDim];
     prec            = new double [nbNodes * operatorDim];
-	FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+    FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
               elemToNode, elemToEdge, intfIndex, intfNodes, neighborList, checkBounds,
               nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbIter, nbBlocks, rank,
     #ifdef XMPI
