@@ -42,9 +42,6 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                          gaspi_queue_id_t queueID)
 #endif
 {
-    uint64_t p1, p2, localElapsed, globalElapsed;
-    p1 = DC_get_cycles ();
-
     // Copy matrix diagonal into preconditioner
     #ifdef REF
         for (int i = 0; i < nbNodes; i++) {
@@ -66,19 +63,9 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         }
     }
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Prec initialization     : " << globalElapsed << " cycles\n";
-    }
-    p1 = DC_get_cycles ();
+//    if (rank == 0) {
+//        cout << "   Prec initialization     : " << globalElapsed << " cycles\n";
+//    }
 
     // Distributed communications
     if (nbBlocks > 1) {
@@ -93,19 +80,9 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         #endif
     }
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Halo exchange           : " << globalElapsed << " cycles\n";
-    }
-    p1 = DC_get_cycles ();
+//    if (rank == 0) {
+//        cout << "   Halo exchange           : " << globalElapsed << " cycles\n";
+//    }
 
     // Inversion of preconditioner
     int dimNode = DIM_NODE, error;
@@ -124,18 +101,9 @@ void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                           prec, &error, checkBounds, &curNode);
     }
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Prec inversion          : " << globalElapsed << " cycles\n";
-    }
+//    if (rank == 0) {
+//        cout << "   Prec inversion          : " << globalElapsed << " cycles\n";
+//    }
 }
 
 // Create preconditioner for laplacian operator
@@ -152,9 +120,6 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
                          gaspi_queue_id_t queueID)
 #endif
 {
-    uint64_t p1, p2, localElapsed, globalElapsed;
-    p1 = DC_get_cycles ();
-
 	// Copy matrix diagonal into preconditioner
     #ifdef REF
     	for (int i = 0; i < nbNodes; i++) {
@@ -174,19 +139,9 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         }
     }
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Prec initialization     : " << globalElapsed << " cycles\n";
-    }
-    p1 = DC_get_cycles ();
+//    if (rank == 0) {
+//        cout << "   Prec initialization     : " << globalElapsed << " cycles\n";
+//    }
 
 	// Distributed communications
     if (nbBlocks > 1) {
@@ -201,19 +156,9 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
         #endif
     }
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Halo exchange           : " << globalElapsed << " cycles\n";
-    }
-    p1 = DC_get_cycles ();
+//    if (rank == 0) {
+//        cout << "   Halo exchange           : " << globalElapsed << " cycles\n";
+//    }
 
 	// Inversion of preconditioner
     #ifdef REF
@@ -229,18 +174,9 @@ void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeR
 	    prec[i] = 1.0 / prec[i];
 	}
 
-    p2 = DC_get_cycles ();
-    localElapsed = p2 - p1;
-    #ifdef XMPI
-        MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "   Prec inversion          : " << globalElapsed << " cycles\n";
-    }
+//    if (rank == 0) {
+//        cout << "   Prec inversion          : " << globalElapsed << " cycles\n";
+//    }
 }
 
 // Call the appropriate function to create the preconditioner

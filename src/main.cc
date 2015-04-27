@@ -113,7 +113,6 @@ int main (int argCount, char **argValue)
 	DC_timer timer;
     index_t nodeToElem;
 	double *coord, *nodeToNodeValue, *prec;
-	double t1, t2;
 	int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *intfIndex, *intfNodes,
         *dispList, *neighborList, *boundNodesCode, *boundNodesList,
         *checkBounds, *elemToEdge = nullptr;
@@ -133,18 +132,15 @@ int main (int argCount, char **argValue)
     // Get the input data from DefMesh
 	if (rank == 0) {
         cout << "Reading input data...                ";
-        timer.time_start ();
-        t1 = DC_get_time ();
+        timer.start_time ();
     }
 	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
                      &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
-        t2 = DC_get_time ();
-        timer.time_stop ();
-        cout << "done  (" << t2 - t1 << " seconds)\n";
+        timer.stop_time ();
         cout << "done  (" << timer.get_avg_time () << " seconds)\n";
-        cout << "done  (" << timer.get_avg_cycles () << " cycles)\n";
+        timer.reset_time ();
     }
 
     // D&C version
@@ -163,31 +159,33 @@ int main (int argCount, char **argValue)
         #ifdef TREE_CREATION
             if (rank == 0) {
                 cout << "Creation of the D&C tree...          ";
-                t1 = DC_get_time ();
+                timer.start_time ();
             }
             DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes);
             if (rank == 0) {
-                t2 = DC_get_time ();
-            	cout << "done  (" << t2 - t1 << " seconds)\n";
+                timer.stop_time ();
+            	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+                timer.reset_time ();
             }
 
         // Reading of the D&C tree and permutations
         #else
             if (rank == 0) {
                 cout << "Reading the D&C tree...              ";
-                t1 = DC_get_time ();
+                timer.start_time ();
             }
             DC_read_tree (treePath, nbElem, nbNodes);
             if (rank == 0) {
-                t2 = DC_get_time ();
-            	cout << "done  (" << t2 - t1 << " seconds)\n";
+                timer.stop_time ();
+            	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+                timer.reset_time ();
             }
         #endif
 
         // Apply permutations
         if (rank == 0) {
             cout << "Applying permutation...              ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         DC_permute_double_2d_array (coord, nbNodes, DIM_NODE);
         #ifndef TREE_CREATION
@@ -198,33 +196,36 @@ int main (int argCount, char **argValue)
         DC_renumber_int_array (dispList, nbDispNodes, true);
         DC_permute_int_1d_array (boundNodesCode, nbNodes);
         if (rank == 0) {
-            t2 = DC_get_time ();
-        	cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
     // Mesh coloring version
     #elif COLORING
         // Create the coloring
         if (rank == 0) {
             cout << "Coloring of the mesh...              ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         int *colorPerm = new int [nbElem];
         coloring_creation (elemToNode, colorPerm, nbElem, nbNodes);
         if (rank == 0) {
-            t2 = DC_get_time ();
-        	cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
 
         // Apply the element permutation
         if (rank == 0) {
             cout << "Applying permutation...              ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         DC_permute_int_2d_array (elemToNode, colorPerm, nbElem, DIM_ELEM, 0);
         delete[] colorPerm;
         if (rank == 0) {
-            t2 = DC_get_time ();
-        	cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
     #endif
 	delete[] dispList;
@@ -232,7 +233,7 @@ int main (int argCount, char **argValue)
     // Create the CSR matrix
 	if (rank == 0) {
 	    cout << "Creating CSR matrix...               ";
-	    t1 = DC_get_time ();
+        timer.start_time ();
     }
     nodeToElem.index = new int [nbNodes + 1];
     nodeToElem.value = new int [nbElem * DIM_ELEM];
@@ -243,27 +244,30 @@ int main (int argCount, char **argValue)
                        nbNodes);
     delete[] nodeToElem.value, delete[] nodeToElem.index;
 	if (rank == 0) {
-        t2 = DC_get_time ();
-    	cout << "done  (" << t2 - t1 << " seconds)\n";
+        timer.stop_time ();
+    	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+        timer.reset_time ();
     }
 
     // Finalize and store the D&C tree
     #if (defined (DC) || defined (DC_HYBRID)) && defined (TREE_CREATION)
         if (rank == 0) {
             cout << "Finalizing the D&C tree...           ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         DC_finalize_tree (nodeToNodeRow, elemToNode, nbNodes);
         if (rank == 0) {
-            t2 = DC_get_time ();
-            cout << "done  (" << t2 - t1 << " seconds)\n"
-                 << "Storing the D&C tree...              ";
-            t1 = DC_get_time ();
+            timer.stop_time ();
+    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
+            cout << "Storing the D&C tree...              ";
+            timer.start_time ();
         }
         DC_store_tree (treePath, nbElem, nbNodes);
         if (rank == 0) {
-            t2 = DC_get_time ();
-            cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
     #endif
 
@@ -271,21 +275,22 @@ int main (int argCount, char **argValue)
     #ifdef OPTIMIZED
         if (rank == 0) {
             cout << "Computing edges index...             ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         elemToEdge = new int [nbElem * VALUES_PER_ELEM];
         create_elemToEdge (nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
                           nbElem);
         if (rank == 0) {
-            t2 = DC_get_time ();
-            cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
     #endif
 
     // Compute the boundary conditions
     if (rank == 0) {
         cout << "Computing boundary conditions...     ";
-        t1 = DC_get_time ();
+        timer.start_time ();
     }
     int dimNode = DIM_NODE;
     boundNodesList = new int [nbBoundNodes];
@@ -295,15 +300,16 @@ int main (int argCount, char **argValue)
     		   boundNodesCode, checkBounds);
     delete[] boundNodesList, delete[] boundNodesCode;
     if (rank == 0) {
-        t2 = DC_get_time ();
-        cout << "done  (" << t2 - t1 << " seconds)\n";
+        timer.stop_time ();
+    	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+        timer.reset_time ();
     }
 
     // Initialization of the GASPI library
     #ifdef GASPI
         if (rank == 0) {
             cout << "Initializing GASPI lib...            ";
-            t1 = DC_get_time ();
+            timer.start_time ();
         }
         double *srcSegment = NULL, *destSegment = NULL;
 	    int *destOffset = new int [nbIntf];
@@ -315,8 +321,9 @@ int main (int argCount, char **argValue)
         GASPI_offset_exchange (destOffset, intfIndex, neighborList, nbIntf, nbBlocks,
                                rank, operatorDim, destSegmentID, queueID);
         if (rank == 0) {
-            t2 = DC_get_time ();
-            cout << "done  (" << t2 - t1 << " seconds)\n";
+            timer.stop_time ();
+    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
         }
     #endif
 
@@ -341,11 +348,9 @@ int main (int argCount, char **argValue)
     #endif
 
     // Check results on nodeToNodeValue & prec arrays
-    if (rank == 0) cout << "done\n\nChecking results...\n" << setprecision (3);
     check_assembly (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim, nbBlocks,
                     rank);
     delete[] prec, delete[] nodeToNodeValue;
-    if (rank == 0) cout << "done\n";
 
     #ifdef XMPI
 	    MPI_Finalize ();

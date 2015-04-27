@@ -18,6 +18,7 @@
     #include <mpi.h>
 #endif
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 #include <DC.h>
 #ifdef CILKVIEW
@@ -59,14 +60,17 @@ void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbN
     precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
 
     if (rank == 0) {
-        cout << "Matrix -> reference norm : " << refMatrixNorm << endl
-        	 << "            current norm : " << MatrixNorm << endl
-        	 << "              difference : " << abs (refMatrixNorm-MatrixNorm)
-        	 << endl << endl;
-        cout << "  Prec -> reference norm : " << refPrecNorm << endl
-        	 << "            current norm : " << precNorm << endl
-        	 << "              difference : " << abs (refPrecNorm - precNorm)
-        	 << endl;
+        cout << "Numerical stability\n" << setprecision (3);
+        cout << "-----------------------------------------\n";
+        cout << "  Matrix -> reference norm : " << refMatrixNorm << endl
+             << "              current norm : " << MatrixNorm << endl
+             << "                difference : " << abs (refMatrixNorm-MatrixNorm)
+             << endl << endl;
+        cout << "    Prec -> reference norm : " << refPrecNorm << endl
+             << "              current norm : " << precNorm << endl
+             << "                difference : " << abs (refPrecNorm - precNorm)
+             << endl;
+        cout << "-----------------------------------------\n";
     }
 }
 
@@ -84,6 +88,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
+    DC_timer ASMtimer, precTimer;
+    uint64_t globalASMcycles, globalPrecCycles, localASMcycles, localPrecCycles;
+
     #ifdef VTUNE
     	__itt_pause ();
     #elif CILKVIEW
@@ -104,28 +111,16 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 
     // Main FEM loop
     for (int iter = 1; iter <= nbIter; iter++) {
-        uint64_t p1, p2, localElapsed, globalElapsed;
         
         // Matrix assembly
-        p1 = DC_get_cycles ();
+        if (nbIter == 1 || iter > 1) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
-        p2 = DC_get_cycles ();
-        localElapsed = p2 - p1;
-        #ifdef XMPI
-            MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-                        MPI_COMM_WORLD);
-        #elif GASPI
-            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-        #endif
-        if (rank == 0) {
-            cout << iter << ". Matrix assembly         : " << globalElapsed
-                 << " cycles\n";
-        }
+        if (nbIter == 1 || iter > 1) ASMtimer.stop_cycles ();
+        if (rank == 0) cout << iter << ". Matrix assembly                   done\n";
 
         // Preconditioner creation
-//        p1 = DC_get_cycles ();
+        if (nbIter == 1 || iter > 1) precTimer.start_cycles ();
         preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
                         intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
                         nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
@@ -135,25 +130,40 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                         , srcSegment, destSegment, destOffset, srcSegmentID,
                         destSegmentID, queueID);
         #endif
-//        p2 = DC_get_cycles ();
-//        localElapsed = p2 - p1;
-//        #ifdef XMPI
-//            MPI_Reduce (&localElapsed, &globalElapsed, 1, MPI_UINT64_T, MPI_MAX, 0,
-//                        MPI_COMM_WORLD);
-//        #elif GASPI
-//            gaspi_allreduce (&localElapsed, &globalElapsed, 1, GASPI_OP_MAX,
-//                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-//        #endif
-//        if (rank == 0) {
-//            cout << "   Preconditioner creation : " << globalElapsed << " cycles\n";
-//            if (iter != nbIter) cout << endl;
-//        }
+        if (nbIter == 1 || iter > 1) precTimer.stop_cycles ();
+        if (rank == 0) {
+            cout << "   Preconditioner creation           done\n";
+            if (iter != nbIter) cout << endl;
+            else                cout << "done\n\n";
+        }
+    }
+
+    // Get the max ASM & prec measures from all ranks
+    localASMcycles  = ASMtimer.get_avg_cycles ();
+    localPrecCycles = precTimer.get_avg_cycles ();
+    #ifdef XMPI
+        MPI_Reduce (&localASMcycles, &globalASMcycles, 1, MPI_UINT64_T, MPI_MAX, 0,
+                    MPI_COMM_WORLD);
+        MPI_Reduce (&localPrecCycles, &globalPrecCycles, 1, MPI_UINT64_T, MPI_MAX, 0,
+                    MPI_COMM_WORLD);
+    #elif GASPI
+        gaspi_allreduce (&localASMcycles, &globalASMcycles, 1, GASPI_OP_MAX,
+                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+        gaspi_allreduce (&localPrecCycles, &globalPrecCycles, 1, GASPI_OP_MAX,
+                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+    #endif
+    if (rank == 0) {
+        cout << "Average cycles\n";
+        cout << "-----------------------------------------\n";
+        cout << "  Matrix assembly         : " << globalASMcycles << endl;
+        cout << "  Preconditioner creation : " << globalPrecCycles << endl;
+        cout << "-----------------------------------------\n\n";
     }
 
     #ifdef VTUNE
     	__itt_resume ();
     #elif CILKVIEW
-    	__cilkview_do_report (&cilkviewData, nullptr, "MiniApp: ASM + Prec",
+        __cilkview_do_report (&cilkviewData, nullptr, "MiniFEM: ASM + Prec",
                               CV_REPORT_WRITE_TO_LOG);
     #elif PAPI
         PAPI_stop (event_set, &papiL3TCM);
