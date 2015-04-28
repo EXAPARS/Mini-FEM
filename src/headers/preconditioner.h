@@ -14,58 +14,21 @@
     You should have received a copy of the GNU Lesser General Public License along with
     Mini-FEM. If not, see <http://www.gnu.org/licenses/>. */
 
-#ifndef PRECOND_H
-#define PRECOND_H
+#ifndef PRECONDITIONER_H
+#define PRECONDITIONER_H
 
-#ifdef GASPI
-    #include <GASPI.h>
-#endif
-
-// External preconditioner Fortran functions
+// External elasticity preconditioner Fortran functions
 extern "C"
 void ela_invert_prec_ (int *dimNode, int *nbNodes, int *nodeToNodeIndex,
                        int *nodeToNodeValue, double *prec, int *error,
                        int *checkBounds, int *curNode);
 
-// Create preconditioner for elasticity operator
-void preconditioner_ela (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
-                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
-                         int *neighborList, int *checkBounds, int nbNodes,
-                         int nbBlocks, int nbIntf, int nbIntfNodes, int operatorDim,
-                         int operatorID, int rank
-#ifdef XMPI
-                         );
-#elif GASPI
-                         , double *srcSegment, double *destSegment, int *destOffset,
-                         gaspi_segment_id_t srcSegmentID,
-                         gaspi_segment_id_t destSegmentID,
-                         gaspi_queue_id_t queueID);
-#endif
+// Inversion of the preconditioner
+void prec_inversion (double *prec, int *nodeToNodeRow, int *nodeToNodeColumn,
+                     int *checkBounds, int nbNodes, int operatorID);
 
-// Create preconditioner for laplacian operator
-void preconditioner_lap (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
-                         int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
-                         int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                         int nbIntfNodes, int operatorDim, int operatorID, int rank
-#ifdef XMPI
-                         );
-#elif GASPI
-                         , double *srcSegment, double *destSegment, int *destOffset,
-                         gaspi_segment_id_t srcSegmentID,
-                         gaspi_segment_id_t destSegmentID,
-                         gaspi_queue_id_t queueID);
-#endif
+// Reset & initialization of the preconditioner
+void prec_init (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
+                int *nodeToNodeColumn, int nbNodes, int operatorDim, int operatorID);
 
-// Call the appropriate function to create the preconditioner
-void preconditioner (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
-                     int *nodeToNodeColumn, int *intfIndex, int *intfNodes,
-                     int *neighborList, int *checkBounds, int nbNodes, int nbBlocks,
-                     int nbIntf, int nbIntfNodes, int operatorDim, int operatorID,
-#ifdef XMPI
-                     int rank);
-#elif GASPI
-                     int rank, double *srcSegment, double *destSegment,
-                     int *destOffset, gaspi_segment_id_t srcSegmentID,
-                     gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
-#endif
 #endif

@@ -20,13 +20,19 @@
 #ifdef GASPI
     #include <GASPI.h>
 #endif
+#include <DC.h>
 
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size);
 
-// Check if current assembly results match to the reference version
-void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges,
-                     int nbNodes, int operatorDim, int nbBlocks, int rank);
+// Check if current results match to the reference version
+void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
+                    int operatorDim, int nbBlocks, int rank);
+
+// Get the average measures from all ranks and keep the max
+void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
+                         DC_timer &haloTimer, DC_timer &precInverTimer,
+                         int nbBlocks, int rank);
 
 // Main loop iterating over the 3 main steps of FEM applications
 void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
@@ -41,4 +47,5 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *destOffset, gaspi_segment_id_t srcSegmentID,
                gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
 #endif
+
 #endif

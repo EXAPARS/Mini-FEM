@@ -81,6 +81,15 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
         if (rank == 0) cerr << "Number of iterations must be at least 1.\n";
 		exit (EXIT_FAILURE);
 	}
+
+    if (rank == 0) {
+        cout << "\t\t* Mini-App *\n\n"
+            << "Test case              : \"" << meshName << "\"\n"
+            << "Operator               : \"" << operatorName << "\"\n"
+            << "Elements per partition :  "  << MAX_ELEM_PER_PART << "\n"
+            << "Iterations             :  "  << *nbIter << "\n\n"
+            << scientific << setprecision (1);
+    }
 }
 
 int main (int argCount, char **argValue)
@@ -97,18 +106,6 @@ int main (int argCount, char **argValue)
         gaspi_proc_rank ((gaspi_rank_t*)&rank);
     #endif
 
-    // Arguments initialization
-    int nbIter;
-    check_args (argCount, argValue, &nbIter, rank);
-    if (rank == 0) {
-        cout << "\t\t* Mini-App *\n\n"
-        	 << "Test case              : \"" << meshName << "\"\n"
-        	 << "Operator               : \"" << operatorName << "\"\n"
-             << "Elements per partition :  "  << MAX_ELEM_PER_PART << "\n"
-        	 << "Iterations             :  "  << nbIter << "\n\n"
-             << scientific << setprecision (1);
-    }
-
 	// Declarations
 	DC_timer timer;
     index_t nodeToElem;
@@ -117,7 +114,10 @@ int main (int argCount, char **argValue)
         *dispList, *neighborList, *boundNodesCode, *boundNodesList,
         *checkBounds, *elemToEdge = nullptr;
 	int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, error;
+        nbBoundNodes, operatorDim, operatorID, nbIter, error;
+
+    // Arguments initialization
+    check_args (argCount, argValue, &nbIter, rank);
 
     // Set the operator dimension & ID
     if (!operatorName.compare ("lap")) {
@@ -328,7 +328,7 @@ int main (int argCount, char **argValue)
     #endif
 
     // Main loop with assembly, solver & update
-    if (rank == 0) cout << "\nMain FEM loop...\n";
+    if (rank == 0) cout << "\nMain FEM loop\n";
     nodeToNodeValue = new double [nbEdges * operatorDim];
     prec            = new double [nbNodes * operatorDim];
     FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
@@ -347,9 +347,9 @@ int main (int argCount, char **argValue)
         delete[] elemToEdge; 
     #endif
 
-    // Check results on nodeToNodeValue & prec arrays
-    check_assembly (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim, nbBlocks,
-                    rank);
+    // Check matrix & prec arraysValue & prec arrays
+    check_results (prec, nodeToNodeValue, nbEdges, nbNodes, operatorDim, nbBlocks,
+                   rank);
     delete[] prec, delete[] nodeToNodeValue;
 
     #ifdef XMPI

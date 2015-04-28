@@ -28,9 +28,12 @@
 
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                        int *neighborList, int nbNodes, int nbIntf, int nbIntfNodes,
-                        int operatorDim, int operatorID, int rank)
+                        int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+                        int nbIntfNodes, int operatorDim, int operatorID, int rank)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     // Initialize communication buffers
     double *bufferSend = new double [nbIntfNodes*operatorDim];
     double *bufferRecv = new double [nbIntfNodes*operatorDim];
@@ -163,14 +166,17 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 #elif GASPI
 
 // Halo exchange between GASPI ranks
-void GASPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                          int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
+void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
+                          int *intfIndex, int *intfNodes, int *neighborList,
+                          int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
                           int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          double *srcSegment, double *destSegment, int *destOffset,
                           const gaspi_segment_id_t srcSegmentID,
                           const gaspi_segment_id_t destSegmentID,
                           const gaspi_queue_id_t queueID)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     gaspi_notification_t notifyValue = 42;
 
     // For each interface

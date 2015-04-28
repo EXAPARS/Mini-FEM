@@ -20,7 +20,6 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
-#include <DC.h>
 #ifdef CILKVIEW
     #include <cilkview.h>
 #elif VTUNE
@@ -33,11 +32,10 @@
 
 #include "globals.h"
 #include "IO.h"
+#include "halo.h"
 #include "preconditioner.h"
 #include "assembly.h"
 #include "FEM.h"
-
-using namespace std;
 
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size)
@@ -50,9 +48,9 @@ double compute_double_norm (double *tab, int size)
     return norm;
 }
 
-// Check if current assembly results match to the reference version
-void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
-                     int operatorDim, int nbBlocks, int rank)
+// Check if current results match to the reference version
+void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNodes,
+                    int operatorDim, int nbBlocks, int rank)
 {
     double refMatrixNorm, refPrecNorm, MatrixNorm, precNorm;
     read_ref_assembly (&refMatrixNorm, &refPrecNorm, nbBlocks, rank);
@@ -61,16 +59,46 @@ void check_assembly (double *prec, double *nodeToNodeValue, int nbEdges, int nbN
 
     if (rank == 0) {
         cout << "Numerical stability\n" << setprecision (3);
-        cout << "-----------------------------------------\n";
+        cout << "----------------------------------------------\n";
         cout << "  Matrix -> reference norm : " << refMatrixNorm << endl
              << "              current norm : " << MatrixNorm << endl
-             << "                difference : " << abs (refMatrixNorm-MatrixNorm)
+             << "                difference : " << abs (refMatrixNorm - MatrixNorm)
              << endl << endl;
         cout << "    Prec -> reference norm : " << refPrecNorm << endl
              << "              current norm : " << precNorm << endl
              << "                difference : " << abs (refPrecNorm - precNorm)
              << endl;
-        cout << "-----------------------------------------\n";
+        cout << "----------------------------------------------\n";
+    }
+}
+
+// Get the average measures from all ranks and keep the max
+void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
+                         DC_timer &haloTimer, DC_timer &precInverTimer,
+                         int nbBlocks, int rank)
+{
+    uint64_t localCycles[4], globalCycles[4];
+    localCycles[0] = ASMtimer.get_avg_cycles ();
+    localCycles[1] = precInitTimer.get_avg_cycles ();
+    localCycles[2] = haloTimer.get_avg_cycles ();
+    localCycles[3] = precInverTimer.get_avg_cycles ();
+
+    #ifdef XMPI
+        MPI_Reduce (localCycles, globalCycles, 4, MPI_UINT64_T, MPI_MAX, 0,
+                    MPI_COMM_WORLD);
+    #elif GASPI
+        gaspi_allreduce (localCycles, globalCycles, 4, GASPI_OP_MAX,
+                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+    #endif
+
+    if (rank == 0) {
+        cout << "Average cycles\n";
+        cout << "----------------------------------------------\n";
+        cout << "  Matrix assembly               : " << globalCycles[0] << endl;
+        cout << "  Preconditioner initialization : " << globalCycles[1] << endl;
+        cout << "  Halo exchange                 : " << globalCycles[2] << endl;
+        cout << "  Preconditioner inversion      : " << globalCycles[3] << endl;
+        cout << "----------------------------------------------\n\n";
     }
 }
 
@@ -88,8 +116,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
-    DC_timer ASMtimer, precTimer;
-    uint64_t globalASMcycles, globalPrecCycles, localASMcycles, localPrecCycles;
+    DC_timer ASMtimer, precInitTimer, haloTimer, precInverTimer;
 
     #ifdef VTUNE
     	__itt_pause ();
@@ -113,52 +140,49 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     for (int iter = 1; iter <= nbIter; iter++) {
         
         // Matrix assembly
+        if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 1) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
         if (nbIter == 1 || iter > 1) ASMtimer.stop_cycles ();
-        if (rank == 0) cout << iter << ". Matrix assembly                   done\n";
+        if (rank == 0) cout << "done\n";
 
-        // Preconditioner creation
-        if (nbIter == 1 || iter > 1) precTimer.start_cycles ();
-        preconditioner (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-                        intfIndex, intfNodes, neighborList, checkBounds, nbNodes,
-                        nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID, rank
+        // Preconditioner initialization
+        if (rank == 0) cout << "   Preconditioner initialization...  ";
+        if (nbIter == 1 || iter > 1) precInitTimer.start_cycles ();
+        prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                   nbNodes, operatorDim, operatorID);
+        if (nbIter == 1 || iter > 1) precInitTimer.stop_cycles ();
+        if (rank == 0) cout << "done\n";
+
+        // Halo exchange
+        if (rank == 0) cout << "   Halo exchange...                  ";
+        if (nbIter == 1 || iter > 1) haloTimer.start_cycles ();
         #ifdef XMPI
-                        );
+            MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                               nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID,
+                               rank);
         #elif GASPI
-                        , srcSegment, destSegment, destOffset, srcSegmentID,
-                        destSegmentID, queueID);
+            GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex, intfNodes,
+                                 neighborList, destOffset, nbNodes, nbBlocks, nbIntf,
+                                 nbIntfNodes, operatorDim, operatorID, rank,
+                                 srcSegmentID, destSegmentID, queueID);
         #endif
-        if (nbIter == 1 || iter > 1) precTimer.stop_cycles ();
-        if (rank == 0) {
-            cout << "   Preconditioner creation           done\n";
-            if (iter != nbIter) cout << endl;
-            else                cout << "done\n\n";
-        }
+        if (nbIter == 1 || iter > 1) haloTimer.stop_cycles ();
+        if (rank == 0) cout << "done\n";
+
+        // Preconditioner inversion
+        if (rank == 0) cout << "   Preconditioner inversion...       ";
+        if (nbIter == 1 || iter > 1) precInverTimer.start_cycles ();
+        prec_inversion (prec, nodeToNodeRow, nodeToNodeColumn, checkBounds, nbNodes,
+                        operatorID);
+        if (nbIter == 1 || iter > 1) precInverTimer.stop_cycles ();
+        if (rank == 0) cout << "done\n\n";
     }
 
-    // Get the max ASM & prec measures from all ranks
-    localASMcycles  = ASMtimer.get_avg_cycles ();
-    localPrecCycles = precTimer.get_avg_cycles ();
-    #ifdef XMPI
-        MPI_Reduce (&localASMcycles, &globalASMcycles, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-        MPI_Reduce (&localPrecCycles, &globalPrecCycles, 1, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (&localASMcycles, &globalASMcycles, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-        gaspi_allreduce (&localPrecCycles, &globalPrecCycles, 1, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
-    if (rank == 0) {
-        cout << "Average cycles\n";
-        cout << "-----------------------------------------\n";
-        cout << "  Matrix assembly         : " << globalASMcycles << endl;
-        cout << "  Preconditioner creation : " << globalPrecCycles << endl;
-        cout << "-----------------------------------------\n\n";
-    }
+    // Print the average measures
+    get_average_cycles (ASMtimer, precInitTimer, haloTimer, precInverTimer, nbBlocks,
+                        rank);
 
     #ifdef VTUNE
     	__itt_resume ();
