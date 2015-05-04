@@ -98,6 +98,8 @@ void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
         cout << "  Preconditioner initialization : " << globalCycles[1] << endl;
         cout << "  Halo exchange                 : " << globalCycles[2] << endl;
         cout << "  Preconditioner inversion      : " << globalCycles[3] << endl;
+        cout << "  Total                         : " << globalCycles[0]
+                  + globalCycles[1] + globalCycles[2] + globalCycles[3] << endl;
         cout << "----------------------------------------------\n\n";
     }
 }

@@ -228,11 +228,11 @@ int main (int argCount, char **argValue)
             timer.reset_time ();
         }
     #endif
-	delete[] dispList;
+    delete[] dispList;
 
     // Create the CSR matrix
-	if (rank == 0) {
-	    cout << "Creating CSR matrix...               ";
+    if (rank == 0) {
+        cout << "Creating CSR matrix...               ";
         timer.start_time ();
     }
     nodeToElem.index = new int [nbNodes + 1];
@@ -243,7 +243,7 @@ int main (int argCount, char **argValue)
     create_nodeToNode (nodeToNodeRow, nodeToNodeColumn, nodeToElem, elemToNode,
                        nbNodes);
     delete[] nodeToElem.value, delete[] nodeToElem.index;
-	if (rank == 0) {
+    if (rank == 0) {
         timer.stop_time ();
     	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
         timer.reset_time ();
@@ -312,7 +312,7 @@ int main (int argCount, char **argValue)
             timer.start_time ();
         }
         double *srcSegment = NULL, *destSegment = NULL;
-	    int *destOffset = new int [nbIntf];
+        int *destOffset = new int [nbIntf];
         gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
         gaspi_segment_id_t srcSegmentID, destSegmentID;
         gaspi_queue_id_t queueID;
@@ -353,7 +353,7 @@ int main (int argCount, char **argValue)
     delete[] prec, delete[] nodeToNodeValue;
 
     #ifdef XMPI
-	    MPI_Finalize ();
+        MPI_Finalize ();
     #elif GASPI
         GASPI_finalize (destOffset, rank, srcSegmentID, destSegmentID, queueID);
         gaspi_proc_term (GASPI_BLOCK);

@@ -170,14 +170,25 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
                           int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
                           int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          const gaspi_segment_id_t srcSegmentID,
-                          const gaspi_segment_id_t destSegmentID,
+                          const gaspi_segment_id_t segment1,
+                          const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
     gaspi_notification_t notifyValue = 42;
+    gaspi_segment_id_t srcSegmentID, destSegmentID;
+
+    // Double buffering flip/flop
+    if ((segment1 % 2) == 0) {
+        srcSegmentID  = segment1;
+        destSegmentID = segment2;
+    }
+    else {
+        srcSegmentID  = segment2;
+        destSegmentID = segment1;
+    }
 
     // For each interface
     #ifdef REF

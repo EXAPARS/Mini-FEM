@@ -1,2 +1,2 @@
-rm miniFEM*.log stdout_* ASM_* Prec_* mesures_miniFEM.o* mesures_miniFEM.e*
+rm miniFEM*.log stdout_* ASM_* Prec_* mesures_miniFEM.o* mesures_miniFEM.e* GASPI_*
 rm elemPerLeaf* colorPerLeaf* elemPerColor* elemToElem* dcTree* 2Dmatrix*

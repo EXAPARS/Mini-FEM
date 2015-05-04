@@ -94,7 +94,7 @@ endif (${CILKVIEW})
 file (GLOB_RECURSE source_list ../src/*)
 
 # Executable
-set (exec miniFEM_${DISTRI}_${SHARED}_${VERSION})
+set (exec miniFEM_${VERSION}_${DISTRI}_${SHARED})
 if (${VERSION} STREQUAL "DC_HYBRID" OR ${ARCHI} STREQUAL "MIC")
     set (exec ${exec}_${ARCHI})
 endif (${VERSION} STREQUAL "DC_HYBRID" OR ${ARCHI} STREQUAL "MIC")
