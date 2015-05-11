@@ -34,7 +34,7 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
                           int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
                           int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          const gaspi_segment_id_t srcSegmentID,
+                          int iter, const gaspi_segment_id_t srcSegmentID,
                           const gaspi_segment_id_t destSegmentID,
                           const gaspi_queue_id_t queueID);
 #endif

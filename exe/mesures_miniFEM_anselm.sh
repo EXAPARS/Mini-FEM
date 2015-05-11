@@ -6,7 +6,7 @@ MACHINE_FILE=$EXE_DIR/GASPI_machine_file
 EXE_FILE=$EXE_DIR/GASPI_exe.sh
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
-NB_ITERATIONS=5
+NB_ITERATIONS=50
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
@@ -21,7 +21,6 @@ do
             module load impi/4.1.1.036
         elif [ $DISTRI == "GASPI" ]; then
             module load gpi2/1.1.1
-            gaspi_logger &
             cat $PBS_NODEFILE | cut -d'.' -f1 > $MACHINE_FILE
         fi
 
@@ -44,9 +43,9 @@ do
                 do
                     export elemPerPart=$PART_SIZE
 
-                    for NB_PROCESS in 1 #4 8 12 16 32 64
+                    for NB_PROCESS in 1 4 8 12 16 32 64
                     do
-                        for NB_THREADS in 1 #2 4 8 12 16
+                        for NB_THREADS in 1 2 4 8 12 16
                         do
                             let "nbCores=$NB_PROCESS*$NB_THREADS"
                             if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi

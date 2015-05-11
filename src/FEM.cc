@@ -139,7 +139,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     #endif
 
     // Main FEM loop
-    for (int iter = 1; iter <= nbIter; iter++) {
+    for (int iter = 0; iter < nbIter; iter++) {
         
         // Matrix assembly
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
@@ -167,7 +167,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         #elif GASPI
             GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex, intfNodes,
                                  neighborList, destOffset, nbNodes, nbBlocks, nbIntf,
-                                 nbIntfNodes, operatorDim, operatorID, rank,
+                                 nbIntfNodes, operatorDim, operatorID, rank, iter,
                                  srcSegmentID, destSegmentID, queueID);
         #endif
         if (nbIter == 1 || iter > 1) haloTimer.stop_cycles ();

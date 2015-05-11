@@ -170,17 +170,15 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
                           int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
                           int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          const gaspi_segment_id_t segment1,
+                          int iter, const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
-    gaspi_notification_t notifyValue = 42;
-    gaspi_segment_id_t srcSegmentID, destSegmentID;
-
     // Double buffering flip/flop
+    gaspi_segment_id_t srcSegmentID, destSegmentID;
     if ((segment1 % 2) == 0) {
         srcSegmentID  = segment1;
         destSegmentID = segment2;
@@ -206,6 +204,7 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         int localOffset = node1 * operatorDim * sizeof (double);
         int size        = (node2 - node1) * operatorDim * sizeof (double);
         int neighbor    = neighborList[i] - 1;
+        gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
 
         // Initialize source segment with laplacian operator
         if (operatorID == 0) {
@@ -246,7 +245,7 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
 
         // Send local data to adjacent domain
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
-                            destOffset[i], size, rank, notifyValue, queueID,
+                            destOffset[i], size, sendNotifyID, rank+1, queueID,
                             GASPI_BLOCK);
     }
 
@@ -261,21 +260,21 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
             cilk_for (int i = 0; i < nbIntf; i++) {
         #endif
     #endif
-        gaspi_notification_id_t recvNotifyID;
+        gaspi_notification_t recvNotifyValue;
         int recvIntf;
 
         // Wait & reset the first incoming notification
         while (1) {
-            gaspi_notification_t recvNotifyValue;
-            gaspi_notify_waitsome (destSegmentID, 0, nbBlocks, &recvNotifyID,
-                                   GASPI_BLOCK);
+            gaspi_notification_id_t recvNotifyID;
+            gaspi_notify_waitsome (destSegmentID, iter*nbBlocks, nbBlocks,
+                                   &recvNotifyID, GASPI_BLOCK);
             gaspi_notify_reset (destSegmentID, recvNotifyID, &recvNotifyValue);
-            if (recvNotifyValue == notifyValue) break;
+            if (recvNotifyValue) break;
         }
 
         // Look for the interface associated with the received notification
         for (recvIntf = 0; recvIntf < nbIntf; recvIntf++) {
-            if ((neighborList[recvIntf]-1) == recvNotifyID) break;
+            if ((neighborList[recvIntf]-1) == (recvNotifyValue-1)) break;
         }
 
         // Assemble local and incoming data with laplacian operator
