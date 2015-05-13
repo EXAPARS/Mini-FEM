@@ -22,8 +22,9 @@
 #include <GASPI.h>
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *destOffset, int rank, gaspi_segment_id_t srcSegmentID,
-                     gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
+void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
+                     gaspi_segment_id_t srcSegmentID, gaspi_segment_id_t destSegmentID,
+                     gaspi_queue_id_t queueID);
 
 // Get the adjacent domains destination offset
 void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
@@ -31,9 +32,10 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
                             gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
 
 // Initialization of the GASPI segments & creation of the segment pointers
-void GASPI_init (double **srcSegment, double **destSegment, gaspi_size_t segmentSize,
+void GASPI_init (double **srcSegment, double **destSegment, int **destOffset,
+                 int nbIntf, int nbBlocks, int rank, gaspi_size_t segmentSize,
                  gaspi_segment_id_t *srcSegmentID, gaspi_segment_id_t *destSegmentID,
-                 gaspi_queue_id_t *queueID, int rank);
+                 gaspi_queue_id_t *queueID);
 
 #endif
 #endif

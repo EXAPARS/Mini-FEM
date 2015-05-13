@@ -19,6 +19,7 @@
 #endif
 #include <iostream>
 #include <iomanip>
+#include <string.h>
 #include <cmath>
 #ifdef CILKVIEW
     #include <cilkview.h>
@@ -83,13 +84,18 @@ void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
     localCycles[2] = haloTimer.get_avg_cycles ();
     localCycles[3] = precInverTimer.get_avg_cycles ();
 
-    #ifdef XMPI
-        MPI_Reduce (localCycles, globalCycles, 4, MPI_UINT64_T, MPI_MAX, 0,
-                    MPI_COMM_WORLD);
-    #elif GASPI
-        gaspi_allreduce (localCycles, globalCycles, 4, GASPI_OP_MAX,
-                         GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
-    #endif
+    if (nbBlocks > 2) {
+        #ifdef XMPI
+            MPI_Reduce (localCycles, globalCycles, 4, MPI_UINT64_T, MPI_MAX, 0,
+                        MPI_COMM_WORLD);
+        #elif GASPI
+            gaspi_allreduce (localCycles, globalCycles, 4, GASPI_OP_MAX,
+                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+        #endif
+    }
+    else {
+        memcpy (globalCycles, localCycles, 4 * sizeof (uint64_t));
+    }
 
     if (rank == 0) {
         cout << "Average cycles\n";
@@ -143,23 +149,23 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         
         // Matrix assembly
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
-        if (nbIter == 1 || iter > 1) ASMtimer.start_cycles ();
+        if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
-        if (nbIter == 1 || iter > 1) ASMtimer.stop_cycles ();
+        if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
         // Preconditioner initialization
         if (rank == 0) cout << "   Preconditioner initialization...  ";
-        if (nbIter == 1 || iter > 1) precInitTimer.start_cycles ();
+        if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
         prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
                    nbNodes, operatorDim, operatorID);
-        if (nbIter == 1 || iter > 1) precInitTimer.stop_cycles ();
+        if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
         // Halo exchange
         if (rank == 0) cout << "   Halo exchange...                  ";
-        if (nbIter == 1 || iter > 1) haloTimer.start_cycles ();
+        if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
         #ifdef XMPI
             MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID,
@@ -170,15 +176,15 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                                  nbIntfNodes, operatorDim, operatorID, rank, iter,
                                  srcSegmentID, destSegmentID, queueID);
         #endif
-        if (nbIter == 1 || iter > 1) haloTimer.stop_cycles ();
+        if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";
-        if (nbIter == 1 || iter > 1) precInverTimer.start_cycles ();
+        if (nbIter == 1 || iter > 0) precInverTimer.start_cycles ();
         prec_inversion (prec, nodeToNodeRow, nodeToNodeColumn, checkBounds, nbNodes,
                         operatorID);
-        if (nbIter == 1 || iter > 1) precInverTimer.stop_cycles ();
+        if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
     }
 

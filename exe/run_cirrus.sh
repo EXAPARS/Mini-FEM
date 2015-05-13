@@ -1,3 +1,3 @@
 #!/bin/sh
 
-ccc_msub ./mesures_miniFEM_cirrus.sh
+ccc_msub ./measures_miniFEM_cirrus.sh

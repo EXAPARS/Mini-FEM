@@ -22,9 +22,13 @@
 using namespace std;
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *destOffset, int rank, gaspi_segment_id_t srcSegmentID,
-                     gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
+void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
+                     gaspi_segment_id_t srcSegmentID, gaspi_segment_id_t destSegmentID,
+                     gaspi_queue_id_t queueID)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     gaspi_return_t check;
     delete[] destOffset;
 
@@ -47,6 +51,9 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
                             int nbIntf, int nbBlocks, int rank, int operatorDim,
                             gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     // For each interface, send local offset to adjacent domain
     for (int i = 0; i < nbIntf; i++) {
         // The +1 is required since a notification value cannot be equal to 0...
@@ -85,13 +92,18 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
 }
 
 // Initialization of the GASPI segments & creation of the segment pointers
-void GASPI_init (double **srcSegment, double **destSegment, gaspi_size_t segmentSize,
+void GASPI_init (double **srcSegment, double **destSegment, int **destOffset,
+                 int nbIntf, int nbBlocks, int rank, gaspi_size_t segmentSize,
                  gaspi_segment_id_t *srcSegmentID, gaspi_segment_id_t *destSegmentID,
-                 gaspi_queue_id_t *queueID, int rank)
+                 gaspi_queue_id_t *queueID)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
     gaspi_return_t check;
 
+    *destOffset = new int [nbIntf];
     *srcSegmentID  = 0;
     *destSegmentID = 1;
     *queueID = 0;

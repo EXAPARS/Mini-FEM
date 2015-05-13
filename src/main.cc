@@ -312,12 +312,12 @@ int main (int argCount, char **argValue)
             timer.start_time ();
         }
         double *srcSegment = NULL, *destSegment = NULL;
-        int *destOffset = new int [nbIntf];
+        int *destOffset = NULL;
         gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
         gaspi_segment_id_t srcSegmentID, destSegmentID;
         gaspi_queue_id_t queueID;
-        GASPI_init (&srcSegment, &destSegment, segmentSize, &srcSegmentID,
-                    &destSegmentID, &queueID, rank);
+        GASPI_init (&srcSegment, &destSegment, &destOffset, nbIntf, nbBlocks, rank,
+                    segmentSize, &srcSegmentID, &destSegmentID, &queueID);
         GASPI_offset_exchange (destOffset, intfIndex, neighborList, nbIntf, nbBlocks,
                                rank, operatorDim, destSegmentID, queueID);
         if (rank == 0) {
@@ -355,7 +355,8 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (destOffset, rank, srcSegmentID, destSegmentID, queueID);
+        GASPI_finalize (destOffset, nbBlocks, rank, srcSegmentID, destSegmentID,
+                        queueID);
         gaspi_proc_term (GASPI_BLOCK);
     #endif
 
