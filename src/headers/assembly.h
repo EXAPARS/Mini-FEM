@@ -26,7 +26,7 @@ typedef struct {
     int operatorDim;
 } userArgs_t;
 
-#ifdef DC_HYBRID
+#ifdef DC_VEC
 // Vectorial version of elasticity assembly on a given element interval
 void assembly_ela_vec (void *userArgs, DCargs_t *DCargs);
 
@@ -35,14 +35,14 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs);
 #endif
 
 // Sequential version of elasticity assembly on a given element interval
-#if defined (DC) || defined (DC_HYBRID)
+#if defined (DC) || defined (DC_VEC)
 void assembly_ela_seq (void *userArgs, DCargs_t *DCargs);
 #else
 void assembly_ela_seq (void *userArgs, int firstElem, int lastElem);
 #endif
 
 // Sequential version of laplacian assembly on a given element interval
-#if defined (DC) || defined (DC_HYBRID)
+#if defined (DC) || defined (DC_VEC)
 void assembly_lap_seq (void *userArgs, DCargs_t *DCargs);
 #else
 void assembly_lap_seq (void *userArgs, int firstElem, int lastElem);

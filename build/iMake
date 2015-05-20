@@ -34,7 +34,7 @@ shopt -s nocasematch
 # Check the number of arguments
 if [[ $# -eq 0 ]]; then
     echo -e "\\033[1;31mPlease specify:"
-    echo -e " - The code version (Ref, DC, Hybrid, or Coloring)"
+    echo -e " - The code version (Ref, DC, DC-Vec, or Coloring)"
     echo -e " - The distributed memory library (MPI or GASPI)"
     echo -e " - The shared memory runtime (Cilk or OpenMP) \\033[0;39m"
     exit
@@ -80,8 +80,8 @@ for i in $@; do
 		VERSION="COLORING"
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
-	elif [[ $i == "hybrid" ]]; then
-        VERSION="DC_HYBRID"
+	elif [[ $i == "dc-vec" ]]; then
+        VERSION="DC_VEC"
 	elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
 	elif [[ $i == "avx" ]]; then
@@ -125,12 +125,12 @@ if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
     exit
 fi
 if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] &&
-   [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_hybrid" ]]; then
-    echo -e "\\033[1;31mPlease specify the code version (Ref, DC, Hybrid, Coloring) \
+   [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_vec" ]]; then
+    echo -e "\\033[1;31mPlease specify the code version (Ref, DC, DC-Vec, Coloring) \
              \\033[0;39m"
     exit
 fi
-if [[ $VERSION == "dc_hybrid" ]] && [[ $ARCHI == 0 ]]; then
+if [[ $VERSION == "dc_vec" ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
@@ -154,9 +154,9 @@ fi
 # Configure D&C library
 DC_ARGUMENTS="$DISTRI $SHARED"
 DC_LIBRARIES=$DC_LIBRARIES\_$DISTRI\_$SHARED
-if [[ $VERSION == "dc_hybrid" ]]; then
-    DC_LIBRARIES=$DC_LIBRARIES\_Hybrid_$ARCHI
-    DC_ARGUMENTS="$DC_ARGUMENTS hybrid $ARCHI"
+if [[ $VERSION == "dc_vec" ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_VEC_$ARCHI
+    DC_ARGUMENTS="$DC_ARGUMENTS vec $ARCHI"
 fi
 if [[ $ARCHI == "mic" ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_$ARCHI

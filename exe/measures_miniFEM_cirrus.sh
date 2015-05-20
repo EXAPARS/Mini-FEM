@@ -30,7 +30,7 @@ do
         export elemPerPart=$PART_SIZE
    	    echo "$TEST_CASE $OPERATOR, $PART_SIZE elements max per partition"
 
-        for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_HYBRID'
+        for VERSION in 'REF' 'COLORING_OMP' 'DC' 'DC_VEC'
         do
             BINARY=./bin/miniFEM_$VERSION\_$VECTOR_LENGTH
             OUTPUT_FILE=./stdout_$VERSION\_$NB_NODES

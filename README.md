@@ -25,18 +25,18 @@ A single command is required to compile a new binary:
     - "ref" to build a pure MPI version,
     - "coloring" to build an hybrid MPI+coloring version,
     - "DC" to build an hybrid MPI+D&C version,
-    - or "hybrid" to build an hybrid version using MPI, D&C, and coloring.
+    - or "vec" to build an hybrid version using MPI, D&C, and coloring.
 
 The 2 last options requires to have the DC-lib.
 The path to the DC-lib can be set at the begining of the iMake file.
 
-- The $VECTOR_LENGTH variable must be specified when using the D&C Hybrid version.
+- The $VECTOR_LENGTH variable must be specified when using the D&C Vec version.
   It can be either SSE, AVX or MIC depending on the target architecture.
 
 - The tree option is used to create a new D&C tree and new permutation functions.
   If not specified, the application will try to read the existing tree and permutations.
   The created tree and permutations are stored in "Mini-FEM/data/$USE_CASE/DC_tree".
-  They are associated to the code version (D&C or D&C Hybrid), to the partition size,
+  They are associated to the code version (D&C or D&C Vec), to the partition size,
   and to the number of MPI processes. The files name can be read this way:
   $VERSION_$PARTITION_SIZE_$NB_PROCESS_$PROCESS_RANK
 

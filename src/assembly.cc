@@ -21,7 +21,7 @@
 #include "globals.h"
 #include "assembly.h"
 
-#ifdef DC_HYBRID
+#ifdef DC_VEC
 // Vectorial version of elasticity assembly on a given element interval
 void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
 {
@@ -315,7 +315,7 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
 #endif
 
 // Sequential version of elasticity assembly on a given element interval
-#if defined (DC) || defined (DC_HYBRID)
+#if defined (DC) || defined (DC_VEC)
 void assembly_ela_seq (void *userArgs, DCargs_t *DCargs)
 #else
 void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
@@ -331,7 +331,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
 
-    #if defined (DC) || defined (DC_HYBRID)
+    #if defined (DC) || defined (DC_VEC)
         // Get D&C arguments
         int firstElem = DCargs->firstElem,
             lastElem  = DCargs->lastElem;
@@ -472,7 +472,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
 }
 
 // Sequential version of laplacian assembly on a given element interval
-#if defined (DC) || defined (DC_HYBRID)
+#if defined (DC) || defined (DC_VEC)
 void assembly_lap_seq (void *userArgs, DCargs_t *DCargs)
 #else
 void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
@@ -488,7 +488,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
 
-    #if defined (DC) || defined (DC_HYBRID)
+    #if defined (DC) || defined (DC_VEC)
         // Get D&C arguments
         int firstElem = DCargs->firstElem,
             lastElem  = DCargs->lastElem;
@@ -652,7 +652,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     #else
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
-            #ifdef DC_HYBRID
+            #ifdef DC_VEC
                 DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs);
             #else
                 DC_tree_traversal (assembly_lap_seq, nullptr, &userArgs);
@@ -660,7 +660,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         }
         // Using elasticity operator
         else {
-            #ifdef DC_HYBRID
+            #ifdef DC_VEC
                 DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs);
             #else
                 DC_tree_traversal (assembly_ela_seq, nullptr, &userArgs);
