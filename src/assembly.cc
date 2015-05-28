@@ -479,11 +479,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             int firstEdge = DCargs->firstEdge * operatorDim;
             int nbEdges = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
             nodeToNodeValue[firstEdge:nbEdges] = 0;
-
-            // Reset locally the preconditioner
-            //int firstNode = DCargs->firstNode * operatorDim;
-            //int nbNodes = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            //prec[firstNode:nbNodes] = 0;
         }
     #endif
 
@@ -559,6 +554,11 @@ void toto (void *userArgs, DCargs_t *DCargs)
             firstNode = DCargs->firstNode,
             lastNode  = DCargs->lastNode;
     #endif
+
+    // Reset locally the preconditioner
+    //int firstNode = DCargs->firstNode * operatorDim;
+    //int nbNodes = (DCargs->lastNode + 1) * operatorDim - firstNode;
+    //prec[firstNode:nbNodes] = 0;
 
     // For each node of the interval
     #if defined (DC) || defined (DC_VEC)
