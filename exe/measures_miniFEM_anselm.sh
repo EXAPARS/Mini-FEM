@@ -13,7 +13,7 @@ cd $EXE_DIR || exit
 
 for VERSION in 'DC' #'DC_VEC' 'REF' 'COLORING_OMP'
 do
-    for DISTRI in 'XMPI' #'GASPI'
+    for DISTRI in 'XMPI' 'GASPI'
     do
         # Set the environment
         module load PrgEnv-intel/14.0.1

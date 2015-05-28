@@ -21,7 +21,7 @@
 
 // Structure containing the user arguments passed to ASM function
 typedef struct {
-    double *coord, *nodeToNodeValue;
+    double *coord, *nodeToNodeValue, *prec;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
     int operatorDim;
 } userArgs_t;
@@ -55,7 +55,7 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID);
 #endif
 
 // Call the appropriate function to perform the assembly step
-void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
+void assembly (double *coord, double *nodeToNodeValue, double *prec, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID);
 

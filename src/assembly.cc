@@ -22,6 +22,105 @@
 #include "assembly.h"
 
 #ifdef DC_VEC
+// Vectorially compute the elements coefficient
+inline void elem_coef_vec (double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE],
+                           double *coord, int *elemToNode, int elem)
+{
+    double xa[VEC_SIZE], xb[VEC_SIZE], xc[VEC_SIZE];
+    double ya[VEC_SIZE], yb[VEC_SIZE], yc[VEC_SIZE];
+    double za[VEC_SIZE], zb[VEC_SIZE], zc[VEC_SIZE];
+    double vol[VEC_SIZE];
+
+    // Compute elements coefficient in vectorial
+    for (int i = 0; i < DIM_ELEM; i++) {
+        int node[VEC_SIZE];
+        for (int j = 0; j < VEC_SIZE; j++) {
+    	    node[j] = elemToNode[(elem+j)*DIM_ELEM+i] - 1;
+        }
+        for (int j = 0; j < DIM_NODE; j++) {
+            elemCoef[i][j][:] = coord[node[:]*DIM_NODE+j];
+        }
+    }
+
+    xa[:] = elemCoef[0][0][:] - elemCoef[3][0][:];
+    xb[:] = elemCoef[2][0][:] - elemCoef[3][0][:];
+    xc[:] = elemCoef[1][0][:] - elemCoef[3][0][:];
+    ya[:] = elemCoef[0][1][:] - elemCoef[3][1][:];
+    yb[:] = elemCoef[2][1][:] - elemCoef[3][1][:];
+    yc[:] = elemCoef[1][1][:] - elemCoef[3][1][:];
+    za[:] = elemCoef[0][2][:] - elemCoef[3][2][:];
+    zb[:] = elemCoef[2][2][:] - elemCoef[3][2][:];
+    zc[:] = elemCoef[1][2][:] - elemCoef[3][2][:];
+    elemCoef[0][0][:] = yb[:] * zc[:] - yc[:] * zb[:];
+    elemCoef[0][1][:] = zb[:] * xc[:] - zc[:] * xb[:];
+    elemCoef[0][2][:] = xb[:] * yc[:] - xc[:] * yb[:];
+    elemCoef[1][0][:] = ya[:] * zb[:] - yb[:] * za[:];
+    elemCoef[1][1][:] = za[:] * xb[:] - zb[:] * xa[:];
+    elemCoef[1][2][:] = xa[:] * yb[:] - xb[:] * ya[:];
+    elemCoef[2][0][:] = yc[:] * za[:] - ya[:] * zc[:];
+    elemCoef[2][1][:] = zc[:] * xa[:] - za[:] * xc[:];
+    elemCoef[2][2][:] = xc[:] * ya[:] - xa[:] * yc[:];
+    elemCoef[3][0][:] = - (elemCoef[0][0][:] + elemCoef[1][0][:] +
+                           elemCoef[2][0][:]);
+    elemCoef[3][1][:] = - (elemCoef[0][1][:] + elemCoef[1][1][:] +
+                           elemCoef[2][1][:]);
+    elemCoef[3][2][:] = - (elemCoef[0][2][:] + elemCoef[1][2][:] +
+                           elemCoef[2][2][:]);
+    vol[:] = xa[:] * elemCoef[0][0][:] + ya[:] * elemCoef[0][1][:] +
+             za[:] * elemCoef[0][2][:];
+
+    for (int i = 0; i < DIM_ELEM; i++) {
+        for (int j = 0; j < DIM_NODE; j++) {
+            elemCoef[i][j][:] *= (1. / vol[:]);
+        }
+    }
+}
+#endif
+
+// Sequentially compute the elements coefficient
+inline void elem_coef_seq (double elemCoef[DIM_ELEM][DIM_NODE], double *coord,
+                           int *elemToNode, int elem)
+{
+    double xa, xb, xc, ya, yb, yc, za, zb, zc, vol;
+
+    for (int i = 0; i < DIM_ELEM; i++) {
+        int node = elemToNode[elem*DIM_ELEM+i] - 1;
+        for (int j = 0; j < DIM_NODE; j++) {
+            elemCoef[i][j] = coord[node*DIM_NODE+j];
+        }
+    }
+
+    xa = elemCoef[0][0] - elemCoef[3][0];
+    xb = elemCoef[2][0] - elemCoef[3][0];
+    xc = elemCoef[1][0] - elemCoef[3][0];
+    ya = elemCoef[0][1] - elemCoef[3][1];
+    yb = elemCoef[2][1] - elemCoef[3][1];
+    yc = elemCoef[1][1] - elemCoef[3][1];
+    za = elemCoef[0][2] - elemCoef[3][2];
+    zb = elemCoef[2][2] - elemCoef[3][2];
+    zc = elemCoef[1][2] - elemCoef[3][2];
+    elemCoef[0][0] = yb * zc - yc * zb;
+    elemCoef[0][1] = zb * xc - zc * xb;
+    elemCoef[0][2] = xb * yc - xc * yb;
+    elemCoef[1][0] = ya * zb - yb * za;
+    elemCoef[1][1] = za * xb - zb * xa;
+    elemCoef[1][2] = xa * yb - xb * ya;
+    elemCoef[2][0] = yc * za - ya * zc;
+    elemCoef[2][1] = zc * xa - za * xc;
+    elemCoef[2][2] = xc * ya - xa * yc;
+    elemCoef[3][0] = - (elemCoef[0][0] + elemCoef[1][0] + elemCoef[2][0]);
+    elemCoef[3][1] = - (elemCoef[0][1] + elemCoef[1][1] + elemCoef[2][1]);
+    elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
+    vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
+
+    for (int i = 0; i < DIM_ELEM; i++) {
+        for (int j = 0; j < DIM_NODE; j++) {
+            elemCoef[i][j] *= (1. / vol);
+        }
+    }
+}
+
+#ifdef DC_VEC
 // Vectorial version of elasticity assembly on a given element interval
 void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
 {
@@ -49,55 +148,9 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
     // For each block of VEC_SIZE elements in the interval
     for (int elem = firstElem; elem <= lastElem; elem += VEC_SIZE) {
 
+        // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE];
-        double xa[VEC_SIZE], xb[VEC_SIZE], xc[VEC_SIZE];
-        double ya[VEC_SIZE], yb[VEC_SIZE], yc[VEC_SIZE];
-        double za[VEC_SIZE], zb[VEC_SIZE], zc[VEC_SIZE];
-        double vol[VEC_SIZE];
-
-        // Compute elements coefficient in vectorial
-        for (int i = 0; i < DIM_ELEM; i++) {
-            int node[VEC_SIZE];
-            for (int j = 0; j < VEC_SIZE; j++) {
-        	    node[j] = elemToNode[(elem+j)*DIM_ELEM+i] - 1;
-            }
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j][:] = coord[node[:]*DIM_NODE+j];
-            }
-        }
-
-        xa[:] = elemCoef[0][0][:] - elemCoef[3][0][:];
-        xb[:] = elemCoef[2][0][:] - elemCoef[3][0][:];
-        xc[:] = elemCoef[1][0][:] - elemCoef[3][0][:];
-        ya[:] = elemCoef[0][1][:] - elemCoef[3][1][:];
-        yb[:] = elemCoef[2][1][:] - elemCoef[3][1][:];
-        yc[:] = elemCoef[1][1][:] - elemCoef[3][1][:];
-        za[:] = elemCoef[0][2][:] - elemCoef[3][2][:];
-        zb[:] = elemCoef[2][2][:] - elemCoef[3][2][:];
-        zc[:] = elemCoef[1][2][:] - elemCoef[3][2][:];
-        elemCoef[0][0][:] = yb[:] * zc[:] - yc[:] * zb[:];
-        elemCoef[0][1][:] = zb[:] * xc[:] - zc[:] * xb[:];
-        elemCoef[0][2][:] = xb[:] * yc[:] - xc[:] * yb[:];
-        elemCoef[1][0][:] = ya[:] * zb[:] - yb[:] * za[:];
-        elemCoef[1][1][:] = za[:] * xb[:] - zb[:] * xa[:];
-        elemCoef[1][2][:] = xa[:] * yb[:] - xb[:] * ya[:];
-        elemCoef[2][0][:] = yc[:] * za[:] - ya[:] * zc[:];
-        elemCoef[2][1][:] = zc[:] * xa[:] - za[:] * xc[:];
-        elemCoef[2][2][:] = xc[:] * ya[:] - xa[:] * yc[:];
-        elemCoef[3][0][:] = - (elemCoef[0][0][:] + elemCoef[1][0][:] +
-                               elemCoef[2][0][:]);
-        elemCoef[3][1][:] = - (elemCoef[0][1][:] + elemCoef[1][1][:] +
-                               elemCoef[2][1][:]);
-        elemCoef[3][2][:] = - (elemCoef[0][2][:] + elemCoef[1][2][:] +
-                               elemCoef[2][2][:]);
-        vol[:] = xa[:] * elemCoef[0][0][:] + ya[:] * elemCoef[0][1][:] +
-                 za[:] * elemCoef[0][2][:];
-
-        for (int i = 0; i < DIM_ELEM; i++) {
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j][:] *= (1. / vol[:]);
-            }
-        }
+        elem_coef_vec (elemCoef, coord, elemToNode, elem);
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -215,55 +268,9 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
     // For each block of VEC_SIZE elements in the interval
     for (int elem = firstElem; elem <= lastElem; elem += VEC_SIZE) {
 
+        // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE];
-        double xa[VEC_SIZE], xb[VEC_SIZE], xc[VEC_SIZE];
-        double ya[VEC_SIZE], yb[VEC_SIZE], yc[VEC_SIZE];
-        double za[VEC_SIZE], zb[VEC_SIZE], zc[VEC_SIZE];
-        double vol[VEC_SIZE];
-
-        // Compute elements coefficient in vectorial
-        for (int i = 0; i < DIM_ELEM; i++) {
-            int node[VEC_SIZE];
-            for (int j = 0; j < VEC_SIZE; j++) {
-        	    node[j] = elemToNode[(elem+j)*DIM_ELEM+i] - 1;
-            }
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j][:] = coord[node[:]*DIM_NODE+j];
-            }
-        }
-
-        xa[:] = elemCoef[0][0][:] - elemCoef[3][0][:];
-        xb[:] = elemCoef[2][0][:] - elemCoef[3][0][:];
-        xc[:] = elemCoef[1][0][:] - elemCoef[3][0][:];
-        ya[:] = elemCoef[0][1][:] - elemCoef[3][1][:];
-        yb[:] = elemCoef[2][1][:] - elemCoef[3][1][:];
-        yc[:] = elemCoef[1][1][:] - elemCoef[3][1][:];
-        za[:] = elemCoef[0][2][:] - elemCoef[3][2][:];
-        zb[:] = elemCoef[2][2][:] - elemCoef[3][2][:];
-        zc[:] = elemCoef[1][2][:] - elemCoef[3][2][:];
-        elemCoef[0][0][:] = yb[:] * zc[:] - yc[:] * zb[:];
-        elemCoef[0][1][:] = zb[:] * xc[:] - zc[:] * xb[:];
-        elemCoef[0][2][:] = xb[:] * yc[:] - xc[:] * yb[:];
-        elemCoef[1][0][:] = ya[:] * zb[:] - yb[:] * za[:];
-        elemCoef[1][1][:] = za[:] * xb[:] - zb[:] * xa[:];
-        elemCoef[1][2][:] = xa[:] * yb[:] - xb[:] * ya[:];
-        elemCoef[2][0][:] = yc[:] * za[:] - ya[:] * zc[:];
-        elemCoef[2][1][:] = zc[:] * xa[:] - za[:] * xc[:];
-        elemCoef[2][2][:] = xc[:] * ya[:] - xa[:] * yc[:];
-        elemCoef[3][0][:] = - (elemCoef[0][0][:] + elemCoef[1][0][:] +
-                               elemCoef[2][0][:]);
-        elemCoef[3][1][:] = - (elemCoef[0][1][:] + elemCoef[1][1][:] +
-                               elemCoef[2][1][:]);
-        elemCoef[3][2][:] = - (elemCoef[0][2][:] + elemCoef[1][2][:] +
-                               elemCoef[2][2][:]);
-        vol[:] = xa[:] * elemCoef[0][0][:] + ya[:] * elemCoef[0][1][:] +
-                 za[:] * elemCoef[0][2][:];
-
-        for (int i = 0; i < DIM_ELEM; i++) {
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j][:] *= (1. / vol[:]);
-            }
-        }
+        elem_coef_vec (elemCoef, coord, elemToNode, elem);
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -357,41 +364,10 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         // For each element of the interval in sequential
         for (int elem = firstElem; elem <= lastElem; elem++) {
     #endif
+
+        // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE];
-        double xa, xb, xc, ya, yb, yc, za, zb, zc, vol;
-
-        // Compute element coefficient sequentially
-        for (int i = 0; i < DIM_ELEM; i++) {
-            int node = elemToNode[elem*DIM_ELEM+i] - 1;
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j] = coord[node*DIM_NODE+j];
-            }
-        }
-
-        xa = elemCoef[0][0] - elemCoef[3][0];
-        xb = elemCoef[2][0] - elemCoef[3][0];
-        xc = elemCoef[1][0] - elemCoef[3][0];
-        ya = elemCoef[0][1] - elemCoef[3][1];
-        yb = elemCoef[2][1] - elemCoef[3][1];
-        yc = elemCoef[1][1] - elemCoef[3][1];
-        za = elemCoef[0][2] - elemCoef[3][2];
-        zb = elemCoef[2][2] - elemCoef[3][2];
-        zc = elemCoef[1][2] - elemCoef[3][2];
-        elemCoef[0][0] = yb * zc - yc * zb;
-        elemCoef[0][1] = zb * xc - zc * xb;
-        elemCoef[0][2] = xb * yc - xc * yb;
-        elemCoef[1][0] = ya * zb - yb * za;
-        elemCoef[1][1] = za * xb - zb * xa;
-        elemCoef[1][2] = xa * yb - xb * ya;
-        elemCoef[2][0] = yc * za - ya * zc;
-        elemCoef[2][1] = zc * xa - za * xc;
-        elemCoef[2][2] = xc * ya - xa * yc;
-        elemCoef[3][0] = - (elemCoef[0][0] + elemCoef[1][0] + elemCoef[2][0]);
-        elemCoef[3][1] = - (elemCoef[0][1] + elemCoef[1][1] + elemCoef[2][1]);
-        elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
-        vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
-
-        elemCoef[:][:] *= (1. / vol);
+        elem_coef_seq (elemCoef, coord, elemToNode, elem);
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -481,74 +457,51 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
+           *prec            = tmpArgs->prec;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
 
+    // Get D&C arguments
     #if defined (DC) || defined (DC_VEC)
-        // Get D&C arguments
         int firstElem = DCargs->firstElem,
-            lastElem  = DCargs->lastElem;
+            lastElem  = DCargs->lastElem,
+            firstNode = DCargs->firstNode,
+            lastNode  = DCargs->lastNode;
     #endif
+
+    // If leaf is not a separator, reset locally the CSR matrix
     #ifdef DC
-        // If leaf is not a separator, reset locally the CSR matrix
         if (DCargs->isSep == 0) {
             int firstEdge = DCargs->firstEdge * operatorDim;
-            int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
-            nodeToNodeValue[firstEdge:lastEdge] = 0;
+            int nbEdges = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+            nodeToNodeValue[firstEdge:nbEdges] = 0;
+
+            // Reset locally the preconditioner
+            //int firstNode = DCargs->firstNode * operatorDim;
+            //int nbNodes = (DCargs->lastNode + 1) * operatorDim - firstNode;
+            //prec[firstNode:nbNodes] = 0;
         }
     #endif
 
+    // For each element of the interval
     #ifdef COLORING
-        // For each element of the interval in parallel
         #ifdef OMP
-            //#pragma omp parallel for  // Disable because of a bug
+            //#pragma omp parallel for  // Disabled because of a bug
             for (int elem = firstElem; elem <= lastElem; elem++) {
         #elif CILK
             cilk_for (int elem = firstElem; elem <= lastElem; elem++) {
         #endif
     #else
-        // For each element of the interval in sequential
         for (int elem = firstElem; elem <= lastElem; elem++) {
     #endif
+
+        // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE];
-        double xa, xb, xc, ya, yb, yc, za, zb, zc, vol;
-
-        // Compute element coefficient sequentially
-        for (int i = 0; i < DIM_ELEM; i++) {
-            int node = elemToNode[elem*DIM_ELEM+i] - 1;
-            for (int j = 0; j < DIM_NODE; j++) {
-                elemCoef[i][j] = coord[node*DIM_NODE+j];
-            }
-        }
-
-        xa = elemCoef[0][0] - elemCoef[3][0];
-        xb = elemCoef[2][0] - elemCoef[3][0];
-        xc = elemCoef[1][0] - elemCoef[3][0];
-        ya = elemCoef[0][1] - elemCoef[3][1];
-        yb = elemCoef[2][1] - elemCoef[3][1];
-        yc = elemCoef[1][1] - elemCoef[3][1];
-        za = elemCoef[0][2] - elemCoef[3][2];
-        zb = elemCoef[2][2] - elemCoef[3][2];
-        zc = elemCoef[1][2] - elemCoef[3][2];
-        elemCoef[0][0] = yb * zc - yc * zb;
-        elemCoef[0][1] = zb * xc - zc * xb;
-        elemCoef[0][2] = xb * yc - xc * yb;
-        elemCoef[1][0] = ya * zb - yb * za;
-        elemCoef[1][1] = za * xb - zb * xa;
-        elemCoef[1][2] = xa * yb - xb * ya;
-        elemCoef[2][0] = yc * za - ya * zc;
-        elemCoef[2][1] = zc * xa - za * xc;
-        elemCoef[2][2] = xc * ya - xa * yc;
-        elemCoef[3][0] = - (elemCoef[0][0] + elemCoef[1][0] + elemCoef[2][0]);
-        elemCoef[3][1] = - (elemCoef[0][1] + elemCoef[1][1] + elemCoef[2][1]);
-        elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
-        vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
-
-        elemCoef[:][:] *= (1. / vol);
+        elem_coef_seq (elemCoef, coord, elemToNode, elem);
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -585,7 +538,43 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 }
+/*
+void toto (void *userArgs, DCargs_t *DCargs)
+{
+    // Get user arguments
+    userArgs_t *tmpArgs = (userArgs_t*)userArgs;
+    double *coord           = tmpArgs->coord,
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
+           *prec            = tmpArgs->prec;
+    int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
+        *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
+        *elemToNode         = tmpArgs->elemToNode,
+        *elemToEdge         = tmpArgs->elemToEdge;
+    int operatorDim         = tmpArgs->operatorDim;
 
+    // Get D&C arguments
+    #if defined (DC) || defined (DC_VEC)
+        int firstElem = DCargs->firstElem,
+            lastElem  = DCargs->lastElem,
+            firstNode = DCargs->firstNode,
+            lastNode  = DCargs->lastNode;
+    #endif
+
+    // For each node of the interval
+    #if defined (DC) || defined (DC_VEC)
+        if (DCargs->isSep == 0) {
+            for (int node = firstNode; node <= lastNode; node++) {
+                for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                    if (nodeToNodeColumn[j]-1 == node) {
+                        prec[node] = nodeToNodeValue[j];
+                        break;
+                    }
+                }
+            }
+        }
+    #endif
+}
+*/
 #ifdef COLORING
 // Iterate over the colors & execute the assembly step on the elements of a same color
 // in parallel
@@ -611,13 +600,13 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID)
 #endif
 
 // Call the appropriate function to perform the assembly step
-void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
+void assembly (double *coord, double *nodeToNodeValue, double *prec, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID)
 {
     // Create the structure containing all the arguments needed for ASM
     userArgs_t userArgs = {
-        coord, nodeToNodeValue,
+        coord, nodeToNodeValue, prec,
         nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
         operatorDim
     };

@@ -255,7 +255,7 @@ int main (int argCount, char **argValue)
             cout << "Finalizing the D&C tree...           ";
             timer.start_time ();
         }
-        DC_finalize_tree (nodeToNodeRow, elemToNode, nbNodes);
+        DC_finalize_tree (nodeToNodeRow, elemToNode);
         if (rank == 0) {
             timer.stop_time ();
     	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";

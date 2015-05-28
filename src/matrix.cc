@@ -39,8 +39,7 @@ void create_elemToEdge (int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNo
             for (int k = 0; k < DIM_ELEM; k++) {
                 int node2 = elemToNode[i*DIM_ELEM+k] - 1;
                 // Get the index of current edge from nodeToNode
-                for (int l = nodeToNodeRow[node1];
-                         l < nodeToNodeRow[node1+1]; l++) {
+                for (int l = nodeToNodeRow[node1]; l < nodeToNodeRow[node1+1]; l++) {
                     if (nodeToNodeColumn[l] == (node2 + 1)) {
                         elemToEdge[i*VALUES_PER_ELEM+ctr] = l;
                         ctr++;

@@ -150,8 +150,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         // Matrix assembly
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
-        assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
-                  elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
+        assembly (coord, nodeToNodeValue, prec, nodeToNodeRow, nodeToNodeColumn,
+                  elemToNode, elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
