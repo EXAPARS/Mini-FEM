@@ -83,7 +83,7 @@ void prec_init (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
                 else {
                     for (int k = 0; k < operatorDim; k++) {
                         prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                    }   
+                    }
                 }
                 break;
             }

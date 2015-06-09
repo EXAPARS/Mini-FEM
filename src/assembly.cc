@@ -113,11 +113,7 @@ inline void elem_coef_seq (double elemCoef[DIM_ELEM][DIM_NODE], double *coord,
     elemCoef[3][2] = - (elemCoef[0][2] + elemCoef[1][2] + elemCoef[2][2]);
     vol = xa * elemCoef[0][0] + ya * elemCoef[0][1] + za * elemCoef[0][2];
 
-    for (int i = 0; i < DIM_ELEM; i++) {
-        for (int j = 0; j < DIM_NODE; j++) {
-            elemCoef[i][j] *= (1. / vol);
-        }
-    }
+    elemCoef[:][:] *= (1. / vol);
 }
 
 #ifdef DC_VEC
@@ -141,8 +137,8 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
     // If leaf is not a separator, reset locally the CSR matrix
     if (DCargs->isSep == 0) {
         int firstEdge = DCargs->firstEdge * operatorDim;
-        int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
-        nodeToNodeValue[firstEdge:lastEdge] = 0;
+        int nbEdges   = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+        nodeToNodeValue[firstEdge:nbEdges] = 0;
     }
 
     // For each block of VEC_SIZE elements in the interval
@@ -261,8 +257,8 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
     // If leaf is not a separator, reset locally the CSR matrix
     if (DCargs->isSep == 0) {
         int firstEdge = DCargs->firstEdge * operatorDim;
-        int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
-        nodeToNodeValue[firstEdge:lastEdge] = 0;
+        int nbEdges   = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+        nodeToNodeValue[firstEdge:nbEdges] = 0;
     }
 
     // For each block of VEC_SIZE elements in the interval
@@ -331,7 +327,8 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
+           *prec            = tmpArgs->prec;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -347,8 +344,8 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         // If leaf is not a separator, reset locally the CSR matrix
         if (DCargs->isSep == 0) {
             int firstEdge = DCargs->firstEdge * operatorDim;
-            int lastEdge  = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
-            nodeToNodeValue[firstEdge:lastEdge] = 0;
+            int nbEdges   = (DCargs->lastEdge + 1) * operatorDim - firstEdge;
+            nodeToNodeValue[firstEdge:nbEdges] = 0;
         }
     #endif
 
@@ -445,6 +442,32 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
             }
         #endif
     }
+
+    #ifndef BULK_SYNCHRONOUS
+        // If leaf is not a separator, reset locally the preconditioner
+        #ifdef DC
+            if (DCargs->isSep == 0) {
+                int firstNode = DCargs->firstNode * operatorDim;
+                int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+                prec[firstNode:nbNodes] = 0;
+            }
+        #endif
+
+        // Compute partially the preconditioner on each node owned by current leaf
+        #if defined (DC) || defined (DC_VEC)
+            for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+                int node = DCargs->ownedNodes[i];
+                for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                    if (nodeToNodeColumn[j]-1 == node) {
+                        for (int k = 0; k < operatorDim; k++) {
+                            prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
+                        }
+                        break;
+                    }
+                }
+            }
+        #endif
+    #endif
 }
 
 // Sequential version of laplacian assembly on a given element interval
@@ -468,9 +491,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
     // Get D&C arguments
     #if defined (DC) || defined (DC_VEC)
         int firstElem = DCargs->firstElem,
-            lastElem  = DCargs->lastElem,
-            firstNode = DCargs->firstNode,
-            lastNode  = DCargs->lastNode;
+            lastElem  = DCargs->lastElem;
     #endif
 
     // If leaf is not a separator, reset locally the CSR matrix
@@ -532,38 +553,21 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             }
         #endif
     }
-}
-/*
-void toto (void *userArgs, DCargs_t *DCargs)
-{
-    // Get user arguments
-    userArgs_t *tmpArgs = (userArgs_t*)userArgs;
-    double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
-           *prec            = tmpArgs->prec;
-    int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
-        *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
-        *elemToNode         = tmpArgs->elemToNode,
-        *elemToEdge         = tmpArgs->elemToEdge;
-    int operatorDim         = tmpArgs->operatorDim;
 
-    // Get D&C arguments
-    #if defined (DC) || defined (DC_VEC)
-        int firstElem = DCargs->firstElem,
-            lastElem  = DCargs->lastElem,
-            firstNode = DCargs->firstNode,
-            lastNode  = DCargs->lastNode;
-    #endif
+    #ifndef BULK_SYNCHRONOUS
+        // If leaf is not a separator, reset locally the preconditioner
+        #ifdef DC
+            if (DCargs->isSep == 0) {
+                int firstNode = DCargs->firstNode * operatorDim;
+                int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+                prec[firstNode:nbNodes] = 0;
+            }
+        #endif
 
-    // Reset locally the preconditioner
-    //int firstNode = DCargs->firstNode * operatorDim;
-    //int nbNodes = (DCargs->lastNode + 1) * operatorDim - firstNode;
-    //prec[firstNode:nbNodes] = 0;
-
-    // For each node of the interval
-    #if defined (DC) || defined (DC_VEC)
-        if (DCargs->isSep == 0) {
-            for (int node = firstNode; node <= lastNode; node++) {
+        // Compute partially the preconditioner on each node owned by current leaf
+        #if defined (DC) || defined (DC_VEC)
+            for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+                int node = DCargs->ownedNodes[i];
                 for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
                     if (nodeToNodeColumn[j]-1 == node) {
                         prec[node] = nodeToNodeValue[j];
@@ -571,10 +575,10 @@ void toto (void *userArgs, DCargs_t *DCargs)
                     }
                 }
             }
-        }
+        #endif
     #endif
 }
-*/
+
 #ifdef COLORING
 // Iterate over the colors & execute the assembly step on the elements of a same color
 // in parallel

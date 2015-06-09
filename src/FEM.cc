@@ -146,7 +146,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 
     // Main FEM loop
     for (int iter = 0; iter < nbIter; iter++) {
-        
+
         // Matrix assembly
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
@@ -155,13 +155,15 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
-        // Preconditioner initialization
-        if (rank == 0) cout << "   Preconditioner initialization...  ";
-        if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
-        prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-                   nbNodes, operatorDim, operatorID);
-        if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
-        if (rank == 0) cout << "done\n";
+        #ifdef BULK_SYNCHRONOUS
+            // Preconditioner initialization
+            if (rank == 0) cout << "   Preconditioner initialization...  ";
+            if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
+            prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
+                       nbNodes, operatorDim, operatorID);
+            if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
+            if (rank == 0) cout << "done\n";
+        #endif
 
         // Halo exchange
         if (rank == 0) cout << "   Halo exchange...                  ";

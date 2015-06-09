@@ -45,6 +45,7 @@ DISTRI=0
 SHARED=0
 VERSION=0
 ARCHI=0
+BULK=0
 TREE=0
 STATS=0
 OPTIMIZED=0
@@ -76,8 +77,10 @@ for i in $@; do
         SHARED="OMP"
 	elif [[ $i == "ref" ]]; then
 		VERSION="REF"
+        BULK=1
 	elif [[ $i == "coloring" ]]; then
 		VERSION="COLORING"
+        BULK=1
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
 	elif [[ $i == "dc-vec" ]]; then
@@ -88,6 +91,8 @@ for i in $@; do
 	    ARCHI="AVX"
 	elif [[ $i == "mic" ]]; then
         ARCHI="MIC"
+    elif [[ $i == "bulk" ]]; then
+        BULK=1
 	elif [[ $i == "tree" ]]; then
 		TREE=1
 	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
@@ -201,16 +206,18 @@ if [[ $ARCHI == "mic" ]]; then
           -DDC_LIBRARIES=$DC_LIBRARIES -DGASPI_LIBRARIES=$GASPI_LIBRARIES \
           -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
           -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
-          -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-          -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+          -DBULK=$BULK -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG \
+          -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE \
+          -DCILKVIEW=$CILKVIEW \
           . -G "Unix Makefiles"
 else
     cmake -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE \
           -DDC_LIBRARIES=$DC_LIBRARIES -DGASPI_LIBRARIES=$GASPI_LIBRARIES \
           -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
           -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
-          -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE \
-          -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
+          -DBULK=$BULK -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG \
+          -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE \
+          -DCILKVIEW=$CILKVIEW \
           . -G "Unix Makefiles"
 fi
 

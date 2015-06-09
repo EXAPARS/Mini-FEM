@@ -143,8 +143,9 @@ int main (int argCount, char **argValue)
         timer.reset_time ();
     }
 
-    // D&C version
+    // D&C versions
     #if defined (DC) || defined (DC_VEC)
+
         // Set the path to the D&C tree and permutations
         #ifdef DC_VEC
             string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/DC_Vec_"
@@ -258,7 +259,7 @@ int main (int argCount, char **argValue)
         DC_finalize_tree (nodeToNodeRow, elemToNode);
         if (rank == 0) {
             timer.stop_time ();
-    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
             timer.reset_time ();
             cout << "Storing the D&C tree...              ";
             timer.start_time ();
@@ -266,7 +267,7 @@ int main (int argCount, char **argValue)
         DC_store_tree (treePath, nbElem, nbNodes);
         if (rank == 0) {
             timer.stop_time ();
-    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
             timer.reset_time ();
         }
     #endif
