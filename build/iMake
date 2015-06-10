@@ -83,7 +83,7 @@ for i in $@; do
         BULK=1
 	elif [[ $i == "dc" ]]; then
 		VERSION="DC"
-	elif [[ $i == "dc-vec" ]]; then
+	elif [[ $i == "dc-vec" ]] || [[ $i == "dcvec" ]]; then
         VERSION="DC_VEC"
 	elif [[ $i == "sse" ]]; then
         ARCHI="SSE"

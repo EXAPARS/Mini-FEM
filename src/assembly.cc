@@ -123,7 +123,8 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
+           *prec            = tmpArgs->prec;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -235,6 +236,28 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
             }
         #endif
     }
+
+    #ifndef BULK_SYNCHRONOUS
+        // If leaf is not a separator, reset locally the preconditioner
+        if (DCargs->isSep == 0) {
+            int firstNode = DCargs->firstNode * operatorDim;
+            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+            prec[firstNode:nbNodes] = 0;
+        }
+
+        // Compute partially the preconditioner on each node owned by current leaf
+        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+            int node = DCargs->ownedNodes[i];
+            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                if (nodeToNodeColumn[j]-1 == node) {
+                    for (int k = 0; k < operatorDim; k++) {
+                        prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
+                    }
+                    break;
+                }
+            }
+        }
+    #endif
 }
 
 // Vectorial version of laplacian assembly on a given element interval
@@ -243,7 +266,8 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
+           *prec            = tmpArgs->prec;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -314,6 +338,26 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
             }
         #endif
     }
+
+    #ifndef BULK_SYNCHRONOUS
+        // If leaf is not a separator, reset locally the preconditioner
+        if (DCargs->isSep == 0) {
+            int firstNode = DCargs->firstNode * operatorDim;
+            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+            prec[firstNode:nbNodes] = 0;
+        }
+
+        // Compute partially the preconditioner on each node owned by current leaf
+        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+            int node = DCargs->ownedNodes[i];
+            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                if (nodeToNodeColumn[j]-1 == node) {
+                    prec[node] = nodeToNodeValue[j];
+                    break;
+                }
+            }
+        }
+    #endif
 }
 #endif
 

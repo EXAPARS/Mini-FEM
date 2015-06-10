@@ -6,14 +6,14 @@ EXE_FILE=$EXE_DIR/GASPI_exe_$NB_NODES.sh
 MACHINE_FILE=$EXE_DIR/GASPI_machine_file_$NB_NODES
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
-NB_ITERATIONS=50
+NB_ITERATIONS=1
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
-for VERSION in 'DC' #'DC_VEC' 'REF' 'COLORING_OMP'
+for VERSION in 'DC_VEC' #'DC' 'REF' 'COLORING_OMP'
 do
-    for DISTRI in 'XMPI' 'GASPI'
+    for DISTRI in 'XMPI' #'GASPI'
     do
         # Set the environment
         module load PrgEnv-intel/14.0.1
@@ -27,10 +27,10 @@ do
         do
             BINARY=$EXE_DIR/bin/miniFEM_$VERSION\_$DISTRI\_$SHARED
             if [ $VERSION == "DC_VEC" ]; then
-                BINARY=$BINARY\_$VECTOR_LENGTH
+                BINARY=$BINARY\_$VECTOR_LENGTH\_TreeCreation
             fi
 
-            for OPERATOR in 'ela' #'lap'
+            for OPERATOR in 'lap' 'ela'
             do
                 # Create the GASPI execution script
                 if [ $DISTRI == "GASPI" ]; then
@@ -45,17 +45,18 @@ do
                 do
                     export elemPerPart=$PART_SIZE
 
-                    for NB_PROCESS in $NB_NODES #1 4 8 12 16 32 64 128 256 512
+                    #for NB_PROCESS in $NB_NODES #1 4 8 12 16 32 64 128 256 512
+                    for NB_PROCESS in 1 4 8 16 32 64 128 256 512
                     do
                         # Create the GASPI machine file
                         if [ $DISTRI == "GASPI" ]; then
                             cat $PBS_NODEFILE | head -n $NB_PROCESS | cut -d'.' -f1 > $MACHINE_FILE
                         fi
 
-                        for NB_THREADS in 16 #1 4 8 12 16
+                        for NB_THREADS in 4 #1 4 8 12 16
                         do
                             let "nbCores=$NB_PROCESS*$NB_THREADS"
-                            if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
+#                            if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
                             if [ $VERSION == 'REF' ] && [ $NB_THREADS -gt 1 ]; then break; fi
                             if [ $SHARED == "CILK" ]; then
                                 export CILK_NWORKERS=$NB_THREADS
