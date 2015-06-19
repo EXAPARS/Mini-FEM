@@ -94,8 +94,8 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
 
 int main (int argCount, char **argValue)
 {
-	// Process initialization
-	int nbBlocks = 0, rank = 0;
+    // Process initialization
+    int nbBlocks = 0, rank = 0;
     #ifdef XMPI
         MPI_Init (&argCount, &argValue);
         MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
@@ -106,14 +106,15 @@ int main (int argCount, char **argValue)
         gaspi_proc_rank ((gaspi_rank_t*)&rank);
     #endif
 
-	// Declarations
-	DC_timer timer;
+    // Declarations
+    DC_timer timer;
     index_t nodeToElem;
-	double *coord, *nodeToNodeValue, *prec;
-	int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *intfIndex, *intfNodes,
-        *dispList, *neighborList, *boundNodesCode, *boundNodesList,
-        *checkBounds, *elemToEdge = nullptr;
-	int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
+    double *coord = nullptr, *nodeToNodeValue = nullptr, *prec = nullptr;
+    int *nodeToNodeRow = nullptr, *nodeToNodeColumn = nullptr, *elemToNode = nullptr,
+        *intfIndex = nullptr, *intfNodes = nullptr, *dispList = nullptr,
+        *neighborList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
+        *checkBounds = nullptr, *elemToEdge = nullptr;
+    int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
         nbBoundNodes, operatorDim, operatorID, nbIter, error;
 
     // Arguments initialization
@@ -201,8 +202,10 @@ int main (int argCount, char **argValue)
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
             timer.reset_time ();
         }
+
     // Mesh coloring version
     #elif COLORING
+
         // Create the coloring
         if (rank == 0) {
             cout << "Coloring of the mesh...              ";
@@ -312,8 +315,8 @@ int main (int argCount, char **argValue)
             cout << "Initializing GASPI lib...            ";
             timer.start_time ();
         }
-        double *srcSegment = NULL, *destSegment = NULL;
-        int *destOffset = NULL;
+        double *srcSegment = nullptr, *destSegment = nullptr;
+        int *destOffset = nullptr;
         gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
         gaspi_segment_id_t srcSegmentID, destSegmentID;
         gaspi_queue_id_t queueID;

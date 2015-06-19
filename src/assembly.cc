@@ -123,8 +123,7 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
-           *prec            = tmpArgs->prec;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -236,28 +235,6 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
             }
         #endif
     }
-
-    #ifndef BULK_SYNCHRONOUS
-        // If leaf is not a separator, reset locally the preconditioner
-        if (DCargs->isSep == 0) {
-            int firstNode = DCargs->firstNode * operatorDim;
-            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            prec[firstNode:nbNodes] = 0;
-        }
-
-        // Compute partially the preconditioner on each node owned by current leaf
-        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-            int node = DCargs->ownedNodes[i];
-            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                if (nodeToNodeColumn[j]-1 == node) {
-                    for (int k = 0; k < operatorDim; k++) {
-                        prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                    }
-                    break;
-                }
-            }
-        }
-    #endif
 }
 
 // Vectorial version of laplacian assembly on a given element interval
@@ -266,8 +243,7 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
-           *prec            = tmpArgs->prec;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -338,26 +314,6 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
             }
         #endif
     }
-
-    #ifndef BULK_SYNCHRONOUS
-        // If leaf is not a separator, reset locally the preconditioner
-        if (DCargs->isSep == 0) {
-            int firstNode = DCargs->firstNode * operatorDim;
-            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            prec[firstNode:nbNodes] = 0;
-        }
-
-        // Compute partially the preconditioner on each node owned by current leaf
-        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-            int node = DCargs->ownedNodes[i];
-            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                if (nodeToNodeColumn[j]-1 == node) {
-                    prec[node] = nodeToNodeValue[j];
-                    break;
-                }
-            }
-        }
-    #endif
 }
 #endif
 
@@ -487,30 +443,27 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #ifndef BULK_SYNCHRONOUS
-        // If leaf is not a separator, reset locally the preconditioner
-        #ifdef DC
-            if (DCargs->isSep == 0) {
-                int firstNode = DCargs->firstNode * operatorDim;
-                int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-                prec[firstNode:nbNodes] = 0;
-            }
-        #endif
+    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+        // Preconditioner reset on each node accessed by current leaf, if it's not a
+        // separator
+        if (DCargs->isSep == 0) {
+            int firstNode = DCargs->firstNode * operatorDim;
+            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+            prec[firstNode:nbNodes] = 0;
+        }
 
-        // Compute partially the preconditioner on each node owned by current leaf
-        #if defined (DC) || defined (DC_VEC)
-            for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-                int node = DCargs->ownedNodes[i];
-                for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                    if (nodeToNodeColumn[j]-1 == node) {
-                        for (int k = 0; k < operatorDim; k++) {
-                            prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                        }
-                        break;
+        // Preconditioner initialization on each node last updated by current leaf
+        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+            int node = DCargs->ownedNodes[i];
+            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                if (nodeToNodeColumn[j]-1 == node) {
+                    for (int k = 0; k < operatorDim; k++) {
+                        prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
                     }
+                    break;
                 }
             }
-        #endif
+        }
     #endif
 }
 
@@ -524,13 +477,21 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
-           *prec            = tmpArgs->prec;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
+    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+        double *prec        = tmpArgs->prec;
+        #ifdef GASPI
+            double *srcSegment = tmpArgs->srcSegment;
+            int *intfIndex     = tmpArgs->intfIndex,
+                *intfNodes     = tmpArgs->intfNodes;
+            int nbIntf         = tmpArgs->nbIntf;
+        #endif
+    #endif
 
     // Get D&C arguments
     #if defined (DC) || defined (DC_VEC)
@@ -598,26 +559,45 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #ifndef BULK_SYNCHRONOUS
-        // If leaf is not a separator, reset locally the preconditioner
-        #ifdef DC
-            if (DCargs->isSep == 0) {
-                int firstNode = DCargs->firstNode * operatorDim;
-                int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-                prec[firstNode:nbNodes] = 0;
-            }
-        #endif
+    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+        // Preconditioner reset on each node accessed by current leaf, if it's not a
+        // separator
+        if (DCargs->isSep == 0) {
+            int firstNode = DCargs->firstNode * operatorDim;
+            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
+            prec[firstNode:nbNodes] = 0;
+        }
 
-        // Compute partially the preconditioner on each node owned by current leaf
-        #if defined (DC) || defined (DC_VEC)
-            for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-                int node = DCargs->ownedNodes[i];
-                for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                    if (nodeToNodeColumn[j]-1 == node) {
-                        prec[node] = nodeToNodeValue[j];
-                        break;
+        // Preconditioner initialization on each node last updated by current leaf
+        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
+            int node = DCargs->ownedNodes[i];
+            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
+                if (nodeToNodeColumn[j]-1 == node) {
+                    prec[node] = nodeToNodeValue[j];
+                    break;
+                }
+            }
+        }
+
+        #ifdef GASPI
+            // Initialize source segment with initialized parts of the preconditioner
+            int ctr = 0;
+            for (int i = 0; i < nbIntf; i++) {
+                for (int j = 0; j < DCargs->nbOwnedNodes; j++) {
+                    int ownedNode = DCargs->ownedNodes[j];
+                    for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
+                        int intfNode = intfNodes[k] - 1;
+                        if (ownedNode == intfNode) {
+                            for (int l = 0; l < operatorDim; l++) {
+                                srcSegment[k*operatorDim+l] =
+                                      prec[ownedNode*operatorDim+l];
+                            }
+                            ctr++;
+                            break;
+                        }
                     }
                 }
+                if (ctr > DCargs->nbOwnedNodes) break;
             }
         #endif
     #endif
@@ -648,15 +628,27 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID)
 #endif
 
 // Call the appropriate function to perform the assembly step
-void assembly (double *coord, double *nodeToNodeValue, double *prec, int *nodeToNodeRow,
+void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
-               int nbEdges, int operatorDim, int operatorID)
+               int nbEdges, int operatorDim, int operatorID
+#if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+               , double *prec
+    #ifdef GASPI
+               , double *srcSegment, int *intfIndex, int *intfNodes, int nbIntf
+    #endif
+#endif
+               )
 {
     // Create the structure containing all the arguments needed for ASM
     userArgs_t userArgs = {
-        coord, nodeToNodeValue, prec,
-        nodeToNodeRow, nodeToNodeColumn, elemToNode, elemToEdge,
-        operatorDim
+        coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
+        elemToEdge, operatorDim
+        #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+            , prec
+            #ifdef GASPI
+                , srcSegment, intfIndex, intfNodes, nbIntf
+            #endif
+        #endif
     };
 
     #ifdef REF

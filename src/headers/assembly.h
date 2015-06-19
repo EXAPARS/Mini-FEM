@@ -21,9 +21,17 @@
 
 // Structure containing the user arguments passed to ASM function
 typedef struct {
-    double *coord, *nodeToNodeValue, *prec;
+    double *coord, *nodeToNodeValue;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
     int operatorDim;
+    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+        double *prec;
+        #ifdef GASPI
+            double *srcSegment;
+            int *intfIndex, *intfNodes;
+            int nbIntf;
+        #endif
+    #endif
 } userArgs_t;
 
 #ifdef DC_VEC
@@ -55,8 +63,15 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID);
 #endif
 
 // Call the appropriate function to perform the assembly step
-void assembly (double *coord, double *nodeToNodeValue, double *prec, int *nodeToNodeRow,
+void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
-               int nbEdges, int operatorDim, int operatorID);
+               int nbEdges, int operatorDim, int operatorID
+#if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+               , double *prec
+    #ifdef GASPI
+               , double *srcSegment, int *intfIndex, int *intfNodes, int nbIntf
+    #endif
+#endif
+               );
 
 #endif

@@ -47,5 +47,4 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *destOffset, gaspi_segment_id_t srcSegmentID,
                gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID);
 #endif
-
 #endif

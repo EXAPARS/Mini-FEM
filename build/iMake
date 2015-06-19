@@ -57,16 +57,16 @@ VTUNE=0
 CILKVIEW=0
 
 for i in $@; do
-	if [[ $i == "clean" ]]; then
-	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
+    if [[ $i == "clean" ]]; then
+        rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile \
               external_files.mod mod_qvddump.mod 2> /dev/null
-		echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
-		exit
-	elif [[ $i == "mrproper" ]]; then
-	    rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../bin/* \
+        echo -e "\\033[1;32mBuild directory has been cleaned up\\033[0;39m"
+        exit
+    elif [[ $i == "mrproper" ]]; then
+        rm -r CMakeCache.txt CMakeFiles/ cmake_install.cmake Makefile ../bin/* \
               external_files.mod mod_qvddump.mod 2> /dev/null
-		echo -e "\\033[1;32mBuild & bin directories have been cleaned up\\033[0;39m"
-		exit
+    	echo -e "\\033[1;32mBuild & bin directories have been cleaned up\\033[0;39m"
+        exit
     elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
         DISTRI="XMPI"
     elif [[ $i == "gaspi" ]]; then
@@ -75,47 +75,47 @@ for i in $@; do
         SHARED="CILK"
     elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
         SHARED="OMP"
-	elif [[ $i == "ref" ]]; then
-		VERSION="REF"
+    elif [[ $i == "ref" ]]; then
+    	VERSION="REF"
         BULK=1
-	elif [[ $i == "coloring" ]]; then
-		VERSION="COLORING"
+    elif [[ $i == "coloring" ]]; then
+    	VERSION="COLORING"
         BULK=1
-	elif [[ $i == "dc" ]]; then
-		VERSION="DC"
-	elif [[ $i == "dc-vec" ]] || [[ $i == "dcvec" ]]; then
+    elif [[ $i == "dc" ]]; then
+    	VERSION="DC"
+    elif [[ $i == "dc-vec" ]] || [[ $i == "dcvec" ]]; then
         VERSION="DC_VEC"
-	elif [[ $i == "sse" ]]; then
+    elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
-	elif [[ $i == "avx" ]]; then
-	    ARCHI="AVX"
-	elif [[ $i == "mic" ]]; then
+    elif [[ $i == "avx" ]]; then
+        ARCHI="AVX"
+    elif [[ $i == "mic" ]]; then
         ARCHI="MIC"
     elif [[ $i == "bulk" ]]; then
         BULK=1
-	elif [[ $i == "tree" ]]; then
-		TREE=1
-	elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
+    elif [[ $i == "tree" ]]; then
+    	TREE=1
+    elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
         STATS=1
-	elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
-		OPTIMIZED=1
-	elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
-		DEBUG=1
-	elif [[ $i == "verbose" ]]; then
-		VERBOSE=1
-	elif [[ $i == "matt" ]]; then
+    elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
+    	OPTIMIZED=1
+    elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
+    	DEBUG=1
+    elif [[ $i == "verbose" ]]; then
+    	VERBOSE=1
+    elif [[ $i == "matt" ]]; then
         MATT=1
         DEBUG=1
-	elif [[ $i == "papi" ]]; then
-		PAPI=1
-	elif [[ $i == "vtune" ]]; then
+    elif [[ $i == "papi" ]]; then
+    	PAPI=1
+    elif [[ $i == "vtune" ]]; then
         VTUNE=1
         DEBUG=1
-	elif [[ $i == "cilkview" ]]; then
-		CILKVIEW=1
-	else
-		echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
-	fi
+    elif [[ $i == "cilkview" ]]; then
+    	CILKVIEW=1
+    else
+    	echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
+    fi
 done
 
 # Check arguments

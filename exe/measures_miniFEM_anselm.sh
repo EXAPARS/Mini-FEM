@@ -4,16 +4,16 @@
 EXE_DIR=$HOME/lthebaul/Mini-FEM/exe
 EXE_FILE=$EXE_DIR/GASPI_exe_$NB_NODES.sh
 MACHINE_FILE=$EXE_DIR/GASPI_machine_file_$NB_NODES
-TEST_CASE=EIB
+TEST_CASE=LM6
 VECTOR_LENGTH=AVX
 NB_ITERATIONS=1
 
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
-for VERSION in 'DC_VEC' #'DC' 'REF' 'COLORING_OMP'
+for VERSION in 'DC' #'DC_VEC' #'REF' 'COLORING_OMP'
 do
-    for DISTRI in 'XMPI' #'GASPI'
+    for DISTRI in 'GASPI' #'XMPI'
     do
         # Set the environment
         module load PrgEnv-intel/14.0.1
@@ -30,7 +30,7 @@ do
                 BINARY=$BINARY\_$VECTOR_LENGTH\_TreeCreation
             fi
 
-            for OPERATOR in 'lap' 'ela'
+            for OPERATOR in 'lap' #'ela'
             do
                 # Create the GASPI execution script
                 if [ $DISTRI == "GASPI" ]; then
@@ -46,7 +46,7 @@ do
                     export elemPerPart=$PART_SIZE
 
                     #for NB_PROCESS in $NB_NODES #1 4 8 12 16 32 64 128 256 512
-                    for NB_PROCESS in 1 4 8 16 32 64 128 256 512
+                    for NB_PROCESS in 4 #1 4 8 16 32 64 128 256 512
                     do
                         # Create the GASPI machine file
                         if [ $DISTRI == "GASPI" ]; then

@@ -63,11 +63,13 @@ void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNo
         cout << "----------------------------------------------\n";
         cout << "  Matrix -> reference norm : " << refMatrixNorm << endl
              << "              current norm : " << MatrixNorm << endl
-             << "                difference : " << abs (refMatrixNorm - MatrixNorm)
+             << "                difference : " << abs (refMatrixNorm - MatrixNorm) /
+                                                        refMatrixNorm
              << endl << endl;
         cout << "    Prec -> reference norm : " << refPrecNorm << endl
              << "              current norm : " << precNorm << endl
-             << "                difference : " << abs (refPrecNorm - precNorm)
+             << "                difference : " << abs (refPrecNorm - precNorm) /
+                                                        refPrecNorm
              << endl;
         cout << "----------------------------------------------\n";
     }
@@ -150,36 +152,45 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         // Matrix assembly
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
-        assembly (coord, nodeToNodeValue, prec, nodeToNodeRow, nodeToNodeColumn,
-                  elemToNode, elemToEdge, nbElem, nbEdges, operatorDim, operatorID);
+        assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
+                  elemToEdge, nbElem, nbEdges, operatorDim, operatorID
+        #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+                  , prec
+            #ifdef GASPI
+                  , srcSegment, intfIndex, intfNodes, nbIntf
+            #endif
+        #endif
+                  );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
-        #ifdef BULK_SYNCHRONOUS
+        #if defined (BULK_SYNCHRONOUS) || defined (REF) || defined (COLORING)
             // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
             if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
             prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-                       nbNodes, operatorDim, operatorID);
+                       nbNodes, operatorDim);
             if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
             if (rank == 0) cout << "done\n";
         #endif
 
-        // Halo exchange
-        if (rank == 0) cout << "   Halo exchange...                  ";
-        if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
-        #ifdef XMPI
-            MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
-                               nbBlocks, nbIntf, nbIntfNodes, operatorDim, operatorID,
-                               rank);
-        #elif GASPI
-            GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex, intfNodes,
-                                 neighborList, destOffset, nbNodes, nbBlocks, nbIntf,
-                                 nbIntfNodes, operatorDim, operatorID, rank, iter,
-                                 srcSegmentID, destSegmentID, queueID);
-        #endif
-        if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
-        if (rank == 0) cout << "done\n";
+//        #if defined (BULK_SYNCHRONOUS) || defined (REF) || defined (COLORING) || \
+//            defined (XMPI)
+            // Halo exchange
+            if (rank == 0) cout << "   Halo exchange...                  ";
+            if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
+            #ifdef XMPI
+                MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
+                                   nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank);
+            #elif GASPI
+                GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex,
+                                     intfNodes, neighborList, destOffset, nbNodes,
+                                     nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank,
+                                     iter, srcSegmentID, destSegmentID, queueID);
+            #endif
+            if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
+            if (rank == 0) cout << "done\n";
+//        #endif
 
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";

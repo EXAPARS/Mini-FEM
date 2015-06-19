@@ -29,7 +29,7 @@
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                         int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                        int nbIntfNodes, int operatorDim, int operatorID, int rank)
+                        int nbIntfNodes, int operatorDim, int rank)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -49,49 +49,24 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                    MPI_COMM_WORLD, &(neighborList[2*nbIntf+i]));
     }
 
-    // Initialize send buffer with laplacian operator
-    if (operatorID == 0) {
-        #ifdef REF
+    // Initialize send buffer
+    #ifdef REF
+        for (int i = 0; i < nbIntf; i++) {
+            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+    #else
+        #ifdef OMP
+            #pragma omp parallel for
             for (int i = 0; i < nbIntf; i++) {
-                for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-        #else
-            #ifdef OMP
                 #pragma omp parallel for
-                for (int i = 0; i < nbIntf; i++) {
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #elif CILK
-                cilk_for (int i = 0; i < nbIntf; i++) {
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #endif
-        #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    bufferSend[j*operatorDim+k] = prec[k*operatorDim+tmpNode];
-                }
-            }
-        }
-    }
-    // Elasticity operator
-    else {
-        #ifdef REF
-            for (int i = 0; i < nbIntf; i++) {
                 for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-        #else
-            #ifdef OMP
-                #pragma omp parallel for
-                for (int i = 0; i < nbIntf; i++) {
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #elif CILK
-                cilk_for (int i = 0; i < nbIntf; i++) {
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #endif
+        #elif CILK
+            cilk_for (int i = 0; i < nbIntf; i++) {
+                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
         #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
-                }
+    #endif
+            int tmpNode = intfNodes[j] - 1;
+            for (int k = 0; k < operatorDim; k++) {
+                bufferSend[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
             }
         }
     }
@@ -112,49 +87,24 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
         MPI_Wait (&(neighborList[2*nbIntf+i]), MPI_STATUS_IGNORE);
     }
 
-    // Assembling local and incoming data with laplacian operator
-    if (operatorID == 0) {
-        #ifdef REF
+    // Assembling local and incoming data
+    #ifdef REF
+        for (int i = 0; i < nbIntf; i++) {
+            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+    #else
+        #ifdef OMP
+            #pragma omp parallel for
             for (int i = 0; i < nbIntf; i++) {
-                for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-        #else
-            #ifdef OMP
                 #pragma omp parallel for
-                for (int i = 0; i < nbIntf; i++) {
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #elif CILK
-                cilk_for (int i = 0; i < nbIntf; i++) {
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #endif
-        #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    prec[k*operatorDim+tmpNode] += bufferRecv[j*operatorDim+k];
-                }
-            }
-        }
-    }
-    // Elasticity operator
-    else {
-        #ifdef REF
-            for (int i = 0; i < nbIntf; i++) {
                 for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-        #else
-            #ifdef OMP
-                #pragma omp parallel for
-                for (int i = 0; i < nbIntf; i++) {
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #elif CILK
-                cilk_for (int i = 0; i < nbIntf; i++) {
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #endif
+        #elif CILK
+            cilk_for (int i = 0; i < nbIntf; i++) {
+                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
         #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    prec[tmpNode*operatorDim+k] += bufferRecv[j*operatorDim+k];
-                }
+    #endif
+            int tmpNode = intfNodes[j] - 1;
+            for (int k = 0; k < operatorDim; k++) {
+                prec[tmpNode*operatorDim+k] += bufferRecv[j*operatorDim+k];
             }
         }
     }
@@ -169,8 +119,8 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
                           int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
-                          int nbIntfNodes, int operatorDim, int operatorID, int rank,
-                          int iter, const gaspi_segment_id_t segment1,
+                          int nbIntfNodes, int operatorDim, int rank, int iter,
+                          const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID)
 {
@@ -205,44 +155,24 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         int size        = (node2 - node1) * operatorDim * sizeof (double);
         int neighbor    = neighborList[i] - 1;
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
-
-        // Initialize source segment with laplacian operator
-        if (operatorID == 0) {
-            #ifdef REF
+/*
+        // Initialize source segment
+        #ifdef REF
+            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+        #else
+            #ifdef OMP
+                #pragma omp parallel for
                 for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #else
-                #ifdef OMP
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #elif CILK
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #endif
+            #elif CILK
+                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
             #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    srcSegment[j*operatorDim+k] = prec[k*operatorDim+tmpNode];
-                }
+        #endif
+            int tmpNode = intfNodes[j] - 1;
+            for (int k = 0; k < operatorDim; k++) {
+                srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
             }
         }
-        // Elasticity operator
-        else {
-            #ifdef REF
-                for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #else
-                #ifdef OMP
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #elif CILK
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #endif
-            #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
-                }
-            }
-        }
-
+*/
         // Send local data to adjacent domain
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
                             destOffset[i], size, sendNotifyID, rank+1, queueID,
@@ -277,42 +207,21 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
             if ((neighborList[recvIntf]-1) == (recvNotifyValue-1)) break;
         }
 
-        // Assemble local and incoming data with laplacian operator
-        if (operatorID == 0) {
-            #ifdef REF
+        // Assemble local and incoming data
+        #ifdef REF
+            for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
+        #else
+            #ifdef OMP
+                #pragma omp parallel for
                 for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-            #else
-                #ifdef OMP
-                    #pragma omp parallel for
-                    for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-                #elif CILK
-                    cilk_for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1];
-                              j++) {
-                #endif
+            #elif CILK
+                cilk_for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1];
+                          j++) {
             #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    prec[k*operatorDim+tmpNode] += destSegment[j*operatorDim+k];
-                }
-            }
-        }
-        // Elasticity operator
-        else {
-            #ifdef REF
-                for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-            #else
-                #ifdef OMP
-                    #pragma omp parallel for
-                    for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1]; j++) {
-                #elif CILK
-                    cilk_for (int j = intfIndex[recvIntf]; j < intfIndex[recvIntf+1];
-                              j++) {
-                #endif
-            #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    prec[tmpNode*operatorDim+k] += destSegment[j*operatorDim+k];
-                }
+        #endif
+            int tmpNode = intfNodes[j] - 1;
+            for (int k = 0; k < operatorDim; k++) {
+                prec[tmpNode*operatorDim+k] += destSegment[j*operatorDim+k];
             }
         }
     }

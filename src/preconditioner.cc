@@ -50,7 +50,7 @@ void prec_inversion (double *prec, int *nodeToNodeRow, int *nodeToNodeColumn,
 
 // Reset & initialization of the preconditioner
 void prec_init (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
-                int *nodeToNodeColumn, int nbNodes, int operatorDim, int operatorID)
+                int *nodeToNodeColumn, int nbNodes, int operatorDim)
 {
     // Preconditioner reset
     #ifdef REF
@@ -77,13 +77,8 @@ void prec_init (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
     #endif
         for (int j = nodeToNodeRow[i]; j < nodeToNodeRow[i+1]; j++) {
             if (nodeToNodeColumn[j]-1 == i) {
-                if (operatorID == 0) {
-                    prec[i] = nodeToNodeValue[j];
-                }
-                else {
-                    for (int k = 0; k < operatorDim; k++) {
-                        prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                    }
+                for (int k = 0; k < operatorDim; k++) {
+                    prec[i*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
                 }
                 break;
             }

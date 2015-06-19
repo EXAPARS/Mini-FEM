@@ -29,6 +29,6 @@ void prec_inversion (double *prec, int *nodeToNodeRow, int *nodeToNodeColumn,
 
 // Reset & initialization of the preconditioner
 void prec_init (double *prec, double *nodeToNodeValue, int *nodeToNodeRow,
-                int *nodeToNodeColumn, int nbNodes, int operatorDim, int operatorID);
+                int *nodeToNodeColumn, int nbNodes, int operatorDim);
 
 #endif
