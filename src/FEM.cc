@@ -154,11 +154,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
-        #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
-                  , prec
-            #ifdef GASPI
-                  , srcSegment, intfIndex, intfNodes, nbIntf
-            #endif
+        #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+                  , prec, srcSegment, intfIndex, intfNodes, nbIntf
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();

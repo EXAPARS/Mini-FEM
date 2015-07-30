@@ -155,24 +155,26 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         int size        = (node2 - node1) * operatorDim * sizeof (double);
         int neighbor    = neighborList[i] - 1;
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
-/*
-        // Initialize source segment
-        #ifdef REF
-            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-        #else
-            #ifdef OMP
-                #pragma omp parallel for
+
+        #ifdef BULK_SYNCHRONOUS
+            // Initialize source segment
+            #ifdef REF
                 for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #elif CILK
-                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+            #else
+                #ifdef OMP
+                    #pragma omp parallel for
+                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+                #elif CILK
+                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+                #endif
             #endif
-        #endif
-            int tmpNode = intfNodes[j] - 1;
-            for (int k = 0; k < operatorDim; k++) {
-                srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                int tmpNode = intfNodes[j] - 1;
+                for (int k = 0; k < operatorDim; k++) {
+                    srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                }
             }
-        }
-*/
+        #endif
+
         // Send local data to adjacent domain
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
                             destOffset[i], size, sendNotifyID, rank+1, queueID,
@@ -226,5 +228,44 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         }
     }
 }
+
+#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+void GASPI_multithreaded_notifications (void *userCommArgs)
+{
+    // Initialize source segment with initialized parts of the preconditioner
+    int size = operatorDim * sizeof (double), ctr = 0;
+    for (int i = 0; i < nbIntf; i++) {
+        int node1       = intfIndex[i];
+        int node2       = intfIndex[i+1];
+        int neighbor    = neighborList[i] - 1;
+        gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
+
+        for (int j = 0; j < DCargs->nbOwnedNodes; j++) {
+            int ownedNode = DCargs->ownedNodes[j];
+            for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
+                int intfNode = intfNodes[k] - 1;
+
+                int localOffset = k * operatorDim * sizeof (double);
+
+
+                if (ownedNode == intfNode) {
+                    for (int l = 0; l < operatorDim; l++) {
+                        srcSegment[k*operatorDim+l] =
+                              prec[ownedNode*operatorDim+l];
+                    }
+
+                    gaspi_write_notify (srcSegmentID, localOffset, neighbor,
+                                        destSegmentID, destOffset[i], size,
+                                        sendNotifyID, rank+1, queueID,
+                                        GASPI_BLOCK);
+                    ctr++;
+                    break;
+                }
+            }
+        }
+        if (ctr > DCargs->nbOwnedNodes) break;
+    }
+}
+#endif
 
 #endif

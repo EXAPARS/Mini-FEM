@@ -69,6 +69,7 @@ for i in $@; do
         exit
     elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
         DISTRI="XMPI"
+        BULK=1
     elif [[ $i == "gaspi" ]]; then
         DISTRI="GASPI"
     elif [[ $i == "cilk" ]]; then
@@ -166,6 +167,12 @@ fi
 if [[ $ARCHI == "mic" ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS $ARCHI"
+fi
+if [[ $BULK == 1 ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_BulkSynchronous
+    DC_ARGUMENTS="$DC_ARGUMENTS bulk"
+else
+    DC_LIBRARIES=$DC_LIBRARIES\_MultiThreadedComm
 fi
 if [[ $TREE == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_TreeCreation

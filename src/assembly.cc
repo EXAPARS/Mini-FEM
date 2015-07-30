@@ -327,8 +327,10 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
-           *nodeToNodeValue = tmpArgs->nodeToNodeValue,
-           *prec            = tmpArgs->prec;
+           *nodeToNodeValue = tmpArgs->nodeToNodeValue;
+    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+        double *prec        = tmpArgs->prec;
+    #endif
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -443,7 +445,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
         // Preconditioner reset on each node accessed by current leaf, if it's not a
         // separator
         if (DCargs->isSep == 0) {
@@ -483,14 +485,8 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
-    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
         double *prec        = tmpArgs->prec;
-        #ifdef GASPI
-            double *srcSegment = tmpArgs->srcSegment;
-            int *intfIndex     = tmpArgs->intfIndex,
-                *intfNodes     = tmpArgs->intfNodes;
-            int nbIntf         = tmpArgs->nbIntf;
-        #endif
     #endif
 
     // Get D&C arguments
@@ -559,7 +555,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
         // Preconditioner reset on each node accessed by current leaf, if it's not a
         // separator
         if (DCargs->isSep == 0) {
@@ -578,28 +574,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
                 }
             }
         }
-
-        #ifdef GASPI
-            // Initialize source segment with initialized parts of the preconditioner
-            int ctr = 0;
-            for (int i = 0; i < nbIntf; i++) {
-                for (int j = 0; j < DCargs->nbOwnedNodes; j++) {
-                    int ownedNode = DCargs->ownedNodes[j];
-                    for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                        int intfNode = intfNodes[k] - 1;
-                        if (ownedNode == intfNode) {
-                            for (int l = 0; l < operatorDim; l++) {
-                                srcSegment[k*operatorDim+l] =
-                                      prec[ownedNode*operatorDim+l];
-                            }
-                            ctr++;
-                            break;
-                        }
-                    }
-                }
-                if (ctr > DCargs->nbOwnedNodes) break;
-            }
-        #endif
     #endif
 }
 
@@ -631,11 +605,9 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID)
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
-#if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
-               , double *prec
-    #ifdef GASPI
-               , double *srcSegment, int *intfIndex, int *intfNodes, int nbIntf
-    #endif
+#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+               , double *prec, double *srcSegment, int *intfIndex, int *intfNodes,
+               int nbIntf
 #endif
                )
 {
@@ -643,13 +615,15 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     userArgs_t userArgs = {
         coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
         elemToEdge, operatorDim
-        #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+        #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
             , prec
-            #ifdef GASPI
-                , srcSegment, intfIndex, intfNodes, nbIntf
-            #endif
         #endif
     };
+    #ifdef MULTI_THREADED_COMM
+    userCommArgs_t userCommArgs = {
+        srcSegment, intfIndex, intfNodes, nbIntf
+    }
+    #endif
 
     #ifdef REF
         // Sequential reset of CSR matrix
@@ -681,18 +655,46 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     #else
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
-            #ifdef DC_VEC
-                DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, &userArgs);
+            #ifdef MULTI_THREADED_COMM
+                #ifdef DC_VEC
+                    DC_tree_traversal (assembly_lap_seq, assembly_lap_vec,
+                                       GASPI_multithreaded_notifications, &userArgs,
+                                       &userCommArgs);
+                #else
+                    DC_tree_traversal (assembly_lap_seq, nullptr,
+                                       GASPI_multithreaded_notifications, &userArgs,
+                                       &userCommArgs);
+                #endif
             #else
-                DC_tree_traversal (assembly_lap_seq, nullptr, &userArgs);
+                #ifdef DC_VEC
+                    DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, nullptr,
+                                       &userArgs, nullptr);
+                #else
+                    DC_tree_traversal (assembly_lap_seq, nullptr, nullptr, &userArgs,
+                                       nullptr);
+                #endif
             #endif
         }
         // Using elasticity operator
         else {
-            #ifdef DC_VEC
-                DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, &userArgs);
+            #ifdef MULTI_THREADED_COMM
+                #ifdef DC_VEC
+                    DC_tree_traversal (assembly_ela_seq, assembly_ela_vec,
+                                       GASPI_multithreaded_notifications, &userArgs,
+                                       &userCommArgs);
+                #else
+                    DC_tree_traversal (assembly_ela_seq, nullptr,
+                                       GASPI_multithreaded_notifications, &userArgs,
+                                       &userCommArgs);
+                #endif
             #else
-                DC_tree_traversal (assembly_ela_seq, nullptr, &userArgs);
+                #ifdef DC_VEC
+                    DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, nullptr,
+                                       &userArgs, nullptr);
+                #else
+                    DC_tree_traversal (assembly_ela_seq, nullptr, nullptr, &userArgs,
+                                       nullptr);
+                #endif
             #endif
         }
     #endif

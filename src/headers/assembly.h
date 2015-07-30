@@ -24,13 +24,8 @@ typedef struct {
     double *coord, *nodeToNodeValue;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
     int operatorDim;
-    #if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
+    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
         double *prec;
-        #ifdef GASPI
-            double *srcSegment;
-            int *intfIndex, *intfNodes;
-            int nbIntf;
-        #endif
     #endif
 } userArgs_t;
 
@@ -66,11 +61,9 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID);
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
-#if (defined (DC) || defined (DC_VEC)) && !defined (BULK_SYNCHRONOUS)
-               , double *prec
-    #ifdef GASPI
-               , double *srcSegment, int *intfIndex, int *intfNodes, int nbIntf
-    #endif
+#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+               , double *prec, double *srcSegment, int *intfIndex, int *intfNodes,
+               int nbIntf
 #endif
                );
 

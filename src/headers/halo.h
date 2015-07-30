@@ -21,6 +21,16 @@
     #include <GASPI.h>
 #endif
 
+#ifdef MULTI_THREADED_COMM
+    // Structure containing the user arguments passed to multi-threaded communication
+    // function
+    typedef struct {
+        double *srcSegment;
+        int *intfIndex, *intfNodes;
+        int nbIntf;
+    } userCommArgs_t;
+#endif
+
 #ifdef XMPI
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
@@ -37,6 +47,10 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID);
+#endif
+
+#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+void GASPI_multithreaded_notifications (void *userCommArgs);
 #endif
 
 #endif
