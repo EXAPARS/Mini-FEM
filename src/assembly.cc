@@ -329,9 +329,6 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
            *nodeToNodeValue = tmpArgs->nodeToNodeValue;
-    #ifdef MULTI_THREADED_COMM
-        double *prec        = tmpArgs->prec;
-    #endif
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
         *nodeToNodeColumn   = tmpArgs->nodeToNodeColumn,
         *elemToNode         = tmpArgs->elemToNode,
@@ -445,29 +442,6 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
             }
         #endif
     }
-
-    #ifdef MULTI_THREADED_COMM
-        // Preconditioner reset on each node accessed by current leaf, if it's not a
-        // separator
-        if (DCargs->isSep == 0) {
-            int firstNode = DCargs->firstNode * operatorDim;
-            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            prec[firstNode:nbNodes] = 0;
-        }
-
-        // Preconditioner initialization on each node last updated by current leaf
-        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-            int node = DCargs->ownedNodes[i];
-            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                if (nodeToNodeColumn[j]-1 == node) {
-                    for (int k = 0; k < operatorDim; k++) {
-                        prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                    }
-                    break;
-                }
-            }
-        }
-    #endif
 }
 
 // Sequential version of laplacian assembly on a given element interval
@@ -486,9 +460,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
-    #ifdef MULTI_THREADED_COMM
-        double *prec        = tmpArgs->prec;
-    #endif
 
     // Get D&C arguments
     #if defined (DC) || defined (DC_VEC)
@@ -555,27 +526,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             }
         #endif
     }
-
-    #ifdef MULTI_THREADED_COMM
-        // Preconditioner reset on each node accessed by current leaf, if it's not a
-        // separator
-        if (DCargs->isSep == 0) {
-            int firstNode = DCargs->firstNode * operatorDim;
-            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            prec[firstNode:nbNodes] = 0;
-        }
-
-        // Preconditioner initialization on each node last updated by current leaf
-        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-            int node = DCargs->ownedNodes[i];
-            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                if (nodeToNodeColumn[j]-1 == node) {
-                    prec[node] = nodeToNodeValue[j];
-                    break;
-                }
-            }
-        }
-    #endif
 }
 
 #ifdef COLORING
@@ -607,8 +557,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
 #ifdef MULTI_THREADED_COMM
-               , double *prec, double *srcSegment, int *intfIndex, int *intfNodes,
-               int nbIntf
+               , double *prec, double *srcSegment, int nbIntf
 #endif
                )
 {
@@ -616,14 +565,9 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     userArgs_t userArgs = {
         coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
         elemToEdge, operatorDim
-        #ifdef MULTI_THREADED_COMM
-            , prec
-        #endif
     };
     #ifdef MULTI_THREADED_COMM
-    userCommArgs_t userCommArgs = {
-        srcSegment, intfIndex, intfNodes, nbIntf
-    };
+    userCommArgs_t userCommArgs = {srcSegment, nbIntf};
     #endif
 
     #ifdef REF

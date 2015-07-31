@@ -164,7 +164,7 @@ int main (int argCount, char **argValue)
                 timer.start_time ();
             }
             DC_create_tree (coord, elemToNode, intfIndex, intfNodes, nbElem, DIM_ELEM,
-                            nbNodes, DIM_NODE, nbIntf, rank);
+                            nbNodes, DIM_NODE, nbIntf, nbBlocks, rank);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";

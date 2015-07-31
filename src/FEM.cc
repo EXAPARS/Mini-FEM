@@ -149,21 +149,20 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     // Main FEM loop
     for (int iter = 0; iter < nbIter; iter++) {
 
-        // Matrix assembly
+        // Matrix assembly for bulk synchronous version + preconditioner initialization
+        // and halo sending for multi-threaded version
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTI_THREADED_COMM
-                  , prec, srcSegment, intfIndex, intfNodes, nbIntf
+                  , prec, srcSegment, nbIntf
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
-        #ifdef MULTI_THREADED_COMM
-            GASPI_multithreaded_wait ();
-        #else
+        #ifdef BULK_SYNCHRONOUS
             // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
             if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
@@ -171,10 +170,15 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                        nbNodes, operatorDim);
             if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
             if (rank == 0) cout << "done\n";
+        #endif
 
+        if (rank == 0) cout << "   Halo exchange...                  ";
+        if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
+        #ifdef MULTI_THREADED_COMM
+            // Wait for multi-threaded GASPI notifications
+            GASPI_multithreaded_wait (nbBlocks);
+        #else
             // Halo exchange
-            if (rank == 0) cout << "   Halo exchange...                  ";
-            if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
                                    nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank);
@@ -184,9 +188,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                                      nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank,
                                      iter, srcSegmentID, destSegmentID, queueID);
             #endif
-            if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
-            if (rank == 0) cout << "done\n";
         #endif
+        if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
+        if (rank == 0) cout << "done\n";
 
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";

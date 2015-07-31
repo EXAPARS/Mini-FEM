@@ -20,7 +20,7 @@
 #include <DC.h>
 
 // Structure containing the user arguments passed to ASM function
-typedef struct {
+typedef struct userArgs_s {
     double *coord, *nodeToNodeValue;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
     int operatorDim;
@@ -62,8 +62,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
 #ifdef MULTI_THREADED_COMM
-               , double *prec, double *srcSegment, int *intfIndex, int *intfNodes,
-               int nbIntf
+               , double *prec, double *srcSegment, int nbIntf
 #endif
                );
 
