@@ -156,24 +156,22 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         int neighbor    = neighborList[i] - 1;
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
 
-        #ifdef BULK_SYNCHRONOUS
-            // Initialize source segment
-            #ifdef REF
+        // Initialize source segment
+        #ifdef REF
+            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+        #else
+            #ifdef OMP
+                #pragma omp parallel for
                 for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-            #else
-                #ifdef OMP
-                    #pragma omp parallel for
-                    for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #elif CILK
-                    cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
-                #endif
+            #elif CILK
+                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
             #endif
-                int tmpNode = intfNodes[j] - 1;
-                for (int k = 0; k < operatorDim; k++) {
-                    srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
-                }
-            }
         #endif
+            int tmpNode = intfNodes[j] - 1;
+            for (int k = 0; k < operatorDim; k++) {
+                srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+            }
+        }
 
         // Send local data to adjacent domain
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
@@ -229,9 +227,15 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
     }
 }
 
-#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
-void GASPI_multithreaded_notifications (void *userCommArgs)
+#endif
+#ifdef MULTI_THREADED_COMM
+
+void GASPI_multithreaded_wait ()
+{}
+
+void GASPI_multithreaded_send (void *userCommArgs)
 {
+/*
     // Initialize source segment with initialized parts of the preconditioner
     int size = operatorDim * sizeof (double), ctr = 0;
     for (int i = 0; i < nbIntf; i++) {
@@ -265,7 +269,7 @@ void GASPI_multithreaded_notifications (void *userCommArgs)
         }
         if (ctr > DCargs->nbOwnedNodes) break;
     }
+*/
 }
-#endif
 
 #endif

@@ -19,6 +19,7 @@
 #endif
 
 #include "globals.h"
+#include "halo.h"
 #include "assembly.h"
 
 #ifdef DC_VEC
@@ -328,7 +329,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
            *nodeToNodeValue = tmpArgs->nodeToNodeValue;
-    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+    #ifdef MULTI_THREADED_COMM
         double *prec        = tmpArgs->prec;
     #endif
     int *nodeToNodeRow      = tmpArgs->nodeToNodeRow,
@@ -445,7 +446,7 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+    #ifdef MULTI_THREADED_COMM
         // Preconditioner reset on each node accessed by current leaf, if it's not a
         // separator
         if (DCargs->isSep == 0) {
@@ -485,7 +486,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         *elemToNode         = tmpArgs->elemToNode,
         *elemToEdge         = tmpArgs->elemToEdge;
     int operatorDim         = tmpArgs->operatorDim;
-    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+    #ifdef MULTI_THREADED_COMM
         double *prec        = tmpArgs->prec;
     #endif
 
@@ -555,7 +556,7 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
-    #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+    #ifdef MULTI_THREADED_COMM
         // Preconditioner reset on each node accessed by current leaf, if it's not a
         // separator
         if (DCargs->isSep == 0) {
@@ -605,7 +606,7 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID)
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
-#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+#ifdef MULTI_THREADED_COMM
                , double *prec, double *srcSegment, int *intfIndex, int *intfNodes,
                int nbIntf
 #endif
@@ -615,14 +616,14 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     userArgs_t userArgs = {
         coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
         elemToEdge, operatorDim
-        #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+        #ifdef MULTI_THREADED_COMM
             , prec
         #endif
     };
     #ifdef MULTI_THREADED_COMM
     userCommArgs_t userCommArgs = {
         srcSegment, intfIndex, intfNodes, nbIntf
-    }
+    };
     #endif
 
     #ifdef REF
@@ -658,11 +659,11 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
             #ifdef MULTI_THREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_lap_seq, assembly_lap_vec,
-                                       GASPI_multithreaded_notifications, &userArgs,
+                                       GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #else
                     DC_tree_traversal (assembly_lap_seq, nullptr,
-                                       GASPI_multithreaded_notifications, &userArgs,
+                                       GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
             #else
@@ -680,11 +681,11 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
             #ifdef MULTI_THREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_ela_seq, assembly_ela_vec,
-                                       GASPI_multithreaded_notifications, &userArgs,
+                                       GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #else
                     DC_tree_traversal (assembly_ela_seq, nullptr,
-                                       GASPI_multithreaded_notifications, &userArgs,
+                                       GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
             #else

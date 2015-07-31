@@ -32,6 +32,7 @@
 #endif
 
 #ifdef XMPI
+
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                         int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
@@ -47,10 +48,13 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID);
-#endif
 
-#if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
-void GASPI_multithreaded_notifications (void *userCommArgs);
 #endif
+#ifdef MULTI_THREADED_COMM
 
+void GASPI_multithreaded_wait ();
+
+void GASPI_multithreaded_send (void *userCommArgs);
+
+#endif
 #endif

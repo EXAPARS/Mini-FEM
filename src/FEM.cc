@@ -154,14 +154,16 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
-        #if (defined (DC) || defined (DC_VEC)) && defined (MULTI_THREADED_COMM)
+        #ifdef MULTI_THREADED_COMM
                   , prec, srcSegment, intfIndex, intfNodes, nbIntf
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
-        #if defined (BULK_SYNCHRONOUS) || defined (REF) || defined (COLORING)
+        #ifdef MULTI_THREADED_COMM
+            GASPI_multithreaded_wait ();
+        #else
             // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
             if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
@@ -169,10 +171,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                        nbNodes, operatorDim);
             if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
             if (rank == 0) cout << "done\n";
-        #endif
 
-//        #if defined (BULK_SYNCHRONOUS) || defined (REF) || defined (COLORING) || \
-//            defined (XMPI)
             // Halo exchange
             if (rank == 0) cout << "   Halo exchange...                  ";
             if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
@@ -187,7 +186,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             #endif
             if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
             if (rank == 0) cout << "done\n";
-//        #endif
+        #endif
 
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";
