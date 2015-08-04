@@ -150,12 +150,12 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     for (int iter = 0; iter < nbIter; iter++) {
 
         // Matrix assembly for bulk synchronous version + preconditioner initialization
-        // and halo sending for multi-threaded version
+        // and halo sending for multithreaded version
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
         if (nbIter == 1 || iter > 0) ASMtimer.start_cycles ();
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
-        #ifdef MULTI_THREADED_COMM
+        #ifdef MULTITHREADED_COMM
                   , prec, srcSegment, nbIntf
         #endif
                   );
@@ -174,8 +174,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
-        #ifdef MULTI_THREADED_COMM
-            // Wait for multi-threaded GASPI notifications
+        #ifdef MULTITHREADED_COMM
+            // Wait for multithreaded GASPI notifications
             GASPI_multithreaded_wait (nbBlocks);
         #else
             // Halo exchange

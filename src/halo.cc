@@ -228,9 +228,9 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
 }
 
 #endif
-#ifdef MULTI_THREADED_COMM
+#ifdef MULTITHREADED_COMM
 
-// Wait for multi-threaded GASPI notifications
+// Wait for multithreaded GASPI notifications
 void GASPI_multithreaded_wait (int nbBlocks)
 {
     // If there is only one domain, do nothing
@@ -240,31 +240,6 @@ void GASPI_multithreaded_wait (int nbBlocks)
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs)
 {
-    #ifdef MULTI_THREADED_COMM
-        double *prec = tmpArgs->prec;
-
-        // Preconditioner reset on each node accessed by current leaf, if it's not a
-        // separator
-        if (DCargs->isSep == 0) {
-            int firstNode = DCargs->firstNode * operatorDim;
-            int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
-            prec[firstNode:nbNodes] = 0;
-        }
-
-        // Preconditioner initialization on each node last updated by current leaf
-        for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
-            int node = DCargs->ownedNodes[i];
-            for (int j = nodeToNodeRow[node]; j < nodeToNodeRow[node+1]; j++) {
-                if (nodeToNodeColumn[j]-1 == node) {
-                    for (int k = 0; k < operatorDim; k++) {
-                        prec[node*operatorDim+k] = nodeToNodeValue[j*operatorDim+k];
-                    }
-                    break;
-                }
-            }
-        }
-    #endif
-
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
         int node1       = intfIndex[i];
@@ -288,6 +263,7 @@ void GASPI_multithreaded_send (void *userCommArgs)
                             GASPI_BLOCK);
     }
 
+    /*****************************************************************/
 
     // Initialize source segment with initialized parts of the preconditioner
     int size = operatorDim * sizeof (double), ctr = 0;

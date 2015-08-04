@@ -24,7 +24,7 @@ typedef struct userArgs_s {
     double *coord, *nodeToNodeValue;
     int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
     int operatorDim;
-    #ifdef MULTI_THREADED_COMM
+    #ifdef MULTITHREADED_COMM
         double *prec;
     #endif
 } userArgs_t;
@@ -61,7 +61,7 @@ void coloring_assembly (userArgs_t *userArgs, int operatorID);
 void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
-#ifdef MULTI_THREADED_COMM
+#ifdef MULTITHREADED_COMM
                , double *prec, double *srcSegment, int nbIntf
 #endif
                );

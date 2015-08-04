@@ -21,8 +21,8 @@
     #include <GASPI.h>
 #endif
 
-#ifdef MULTI_THREADED_COMM
-    // Structure containing the user arguments passed to multi-threaded communication
+#ifdef MULTITHREADED_COMM
+    // Structure containing the user arguments passed to multithreaded communication
     // function
     typedef struct userCommArgs_s {
         double *srcSegment;
@@ -50,7 +50,7 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           const gaspi_queue_id_t queueID);
 
 #endif
-#ifdef MULTI_THREADED_COMM
+#ifdef MULTITHREADED_COMM
 
 void GASPI_multithreaded_wait (int nbBlocks);
 

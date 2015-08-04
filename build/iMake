@@ -172,7 +172,7 @@ if [[ $BULK == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_BulkSynchronous
     DC_ARGUMENTS="$DC_ARGUMENTS bulk"
 else
-    DC_LIBRARIES=$DC_LIBRARIES\_MultiThreadedComm
+    DC_LIBRARIES=$DC_LIBRARIES\_MultithreadedComm
 fi
 if [[ $TREE == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_TreeCreation
