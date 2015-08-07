@@ -605,7 +605,11 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int *nodeToNodeColumn, int *elemToNode, int *elemToEdge, int nbElem,
                int nbEdges, int operatorDim, int operatorID
 #ifdef MULTITHREADED_COMM
-               , double *prec, double *srcSegment, int nbIntf
+               , double *prec, double *srcSegment, int *neighborList, int *destOffset,
+               int nbBlocks, int nbIntf, int rank, int iter,
+               const gaspi_segment_id_t srcSegmentID,
+               const gaspi_segment_id_t destSegmentID,
+               const gaspi_queue_id_t queueID
 #endif
                )
 {
@@ -615,7 +619,12 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
         elemToEdge, operatorDim
     };
     #ifdef MULTITHREADED_COMM
-    userCommArgs_t userCommArgs = {srcSegment, nbIntf};
+        userCommArgs_t userCommArgs = {
+            prec, srcSegment,
+            neighborList, destOffset,
+            nbBlocks, nbIntf, operatorDim, rank, iter,
+            srcSegmentID, destSegmentID, queueID
+        };
     #endif
 
     #ifdef REF

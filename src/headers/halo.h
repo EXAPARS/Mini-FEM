@@ -20,6 +20,7 @@
 #ifdef GASPI
     #include <GASPI.h>
 #endif
+#include <DC.h>
 
 #ifdef MULTITHREADED_COMM
     // Structure containing the user arguments passed to multithreaded communication
@@ -28,8 +29,8 @@
         double *prec, *srcSegment;
         int *neighborList, *destOffset;
         int nbBlocks, nbIntf, operatorDim, rank, iter;
-        const gaspi_segment_id_t srcSegmentID, gaspi_segment_id_t destSegmentID;
-        const gaspi_queue_id_t queueID
+        const gaspi_segment_id_t srcSegmentID, destSegmentID;
+        const gaspi_queue_id_t queueID;
     } userCommArgs_t;
 #endif
 
@@ -53,9 +54,11 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
 #endif
 #ifdef MULTITHREADED_COMM
 
+// Wait for multithreaded GASPI notifications
 void GASPI_multithreaded_wait (int nbBlocks);
 
-void GASPI_multithreaded_send (void *userCommArgs);
+// Send initialized parts of the preconditioner
+void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs);
 
 #endif
 #endif

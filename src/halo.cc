@@ -236,20 +236,35 @@ void GASPI_multithreaded_wait (int nbBlocks)
     if (nbBlocks < 2) return;
 }
 
-double *prec, double *srcSegment, int *neighborList, int *destOffset, int nbBlocks,
-int nbIntf, int operatorDim, int rank, int iter, const gaspi_segment_id_t srcSegmentID,
-const gaspi_segment_id_t destSegmentID, const gaspi_queue_id_t queueID
-
 // Send initialized parts of the preconditioner
-void GASPI_multithreaded_send (void *userCommArgs)
+void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
 {
+    // Get user arguments
+    userCommArgs_t *tmpCommArgs = (userCommArgs_t*)userCommArgs;
+    double *prec       = tmpCommArgs->prec,
+           *srcSegment = tmpCommArgs->srcSegment;
+    int *neighborList  = tmpCommArgs->neighborList,
+        *destOffset    = tmpCommArgs->destOffset;
+    int nbBlocks       = tmpCommArgs->nbBlocks,
+        nbIntf         = tmpCommArgs->nbIntf,
+        operatorDim    = tmpCommArgs->operatorDim,
+        rank           = tmpCommArgs->rank,
+        iter           = tmpCommArgs->iter;
+    const gaspi_segment_id_t srcSegmentID  = tmpCommArgs->srcSegmentID,
+                             destSegmentID = tmpCommArgs->destSegmentID;
+    const gaspi_queue_id_t queueID         = tmpCommArgs->queueID;
+
+    // Get D&C arguments
+    int *intfIndex, *intfNodes, *ownedNodes;
+    int nbOwnedNodes;
+
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
-        int node1       = tree.intfIndex[i];
-        int node2       = tree.intfIndex[i+1];
+        int node1       = intfIndex[i];
+        int node2       = intfIndex[i+1];
         int localOffset = node1 * operatorDim * sizeof (double);
         int size        = (node2 - node1) * operatorDim * sizeof (double);
         int neighbor    = neighborList[i] - 1;

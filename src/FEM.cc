@@ -156,7 +156,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
-                  , prec, srcSegment, nbIntf
+                  , prec, srcSegment, neighborList, destOffset, nbBlocks, nbIntf,
+                  rank, iter, srcSegmentID, destSegmentID, queueID
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
