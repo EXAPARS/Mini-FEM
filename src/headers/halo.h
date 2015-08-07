@@ -25,9 +25,11 @@
     // Structure containing the user arguments passed to multithreaded communication
     // function
     typedef struct userCommArgs_s {
-        double *srcSegment;
-        int *intfIndex, *intfNodes;
-        int nbIntf;
+        double *prec, *srcSegment;
+        int *neighborList, *destOffset;
+        int nbBlocks, nbIntf, operatorDim, rank, iter;
+        const gaspi_segment_id_t srcSegmentID, gaspi_segment_id_t destSegmentID;
+        const gaspi_queue_id_t queueID
     } userCommArgs_t;
 #endif
 
@@ -35,17 +37,16 @@
 
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                        int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                        int nbIntfNodes, int operatorDim, int rank);
+                        int *neighborList, int nbBlocks, int nbIntf, int nbIntfNodes,
+                        int operatorDim, int rank);
 
 #elif GASPI
 
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
-                          int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
-                          int nbIntfNodes, int operatorDim, int rank, int iter,
-                          const gaspi_segment_id_t segment1,
+                          int *destOffset, int nbBlocks, int nbIntf, int operatorDim,
+                          int rank, int iter, const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID);
 

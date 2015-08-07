@@ -163,8 +163,7 @@ int main (int argCount, char **argValue)
                 cout << "Creation of the D&C tree...          ";
                 timer.start_time ();
             }
-            DC_create_tree (coord, elemToNode, intfIndex, intfNodes, nbElem, DIM_ELEM,
-                            nbNodes, DIM_NODE, nbIntf, nbBlocks, rank);
+            DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes, rank);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -260,7 +259,8 @@ int main (int argCount, char **argValue)
             cout << "Finalizing the D&C tree...           ";
             timer.start_time ();
         }
-        DC_finalize_tree (nodeToNodeRow, elemToNode);
+        DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, DIM_ELEM,
+                          nbBlocks, nbIntf);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";

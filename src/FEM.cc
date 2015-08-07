@@ -180,13 +180,13 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         #else
             // Halo exchange
             #ifdef XMPI
-                MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbNodes,
-                                   nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank);
+                MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbBlocks,
+                                   nbIntf, nbIntfNodes, operatorDim, rank);
             #elif GASPI
                 GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex,
-                                     intfNodes, neighborList, destOffset, nbNodes,
-                                     nbBlocks, nbIntf, nbIntfNodes, operatorDim, rank,
-                                     iter, srcSegmentID, destSegmentID, queueID);
+                                     intfNodes, neighborList, destOffset, nbBlocks,
+                                     nbIntf, operatorDim, rank, iter, srcSegmentID,
+                                     destSegmentID, queueID);
             #endif
         #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();

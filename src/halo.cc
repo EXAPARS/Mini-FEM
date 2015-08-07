@@ -28,8 +28,8 @@
 
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                        int *neighborList, int nbNodes, int nbBlocks, int nbIntf,
-                        int nbIntfNodes, int operatorDim, int rank)
+                        int *neighborList, int nbBlocks, int nbIntf, int nbIntfNodes,
+                        int operatorDim, int rank)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -118,9 +118,8 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
                           int *intfIndex, int *intfNodes, int *neighborList,
-                          int *destOffset, int nbNodes, int nbBlocks, int nbIntf,
-                          int nbIntfNodes, int operatorDim, int rank, int iter,
-                          const gaspi_segment_id_t segment1,
+                          int *destOffset, int nbBlocks, int nbIntf, int operatorDim,
+                          int rank, int iter, const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID)
 {
@@ -237,13 +236,20 @@ void GASPI_multithreaded_wait (int nbBlocks)
     if (nbBlocks < 2) return;
 }
 
+double *prec, double *srcSegment, int *neighborList, int *destOffset, int nbBlocks,
+int nbIntf, int operatorDim, int rank, int iter, const gaspi_segment_id_t srcSegmentID,
+const gaspi_segment_id_t destSegmentID, const gaspi_queue_id_t queueID
+
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs)
 {
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
-        int node1       = intfIndex[i];
-        int node2       = intfIndex[i+1];
+        int node1       = tree.intfIndex[i];
+        int node2       = tree.intfIndex[i+1];
         int localOffset = node1 * operatorDim * sizeof (double);
         int size        = (node2 - node1) * operatorDim * sizeof (double);
         int neighbor    = neighborList[i] - 1;
@@ -261,42 +267,6 @@ void GASPI_multithreaded_send (void *userCommArgs)
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
                             destOffset[i], size, sendNotifyID, rank+1, queueID,
                             GASPI_BLOCK);
-    }
-
-    /*****************************************************************/
-
-    // Initialize source segment with initialized parts of the preconditioner
-    int size = operatorDim * sizeof (double), ctr = 0;
-    for (int i = 0; i < nbIntf; i++) {
-        int node1    = intfIndex[i];
-        int node2    = intfIndex[i+1];
-        int neighbor = neighborList[i] - 1;
-        gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
-
-        for (int j = 0; j < DCargs->nbOwnedNodes; j++) {
-            int ownedNode = DCargs->ownedNodes[j];
-            for (int k = intfIndex[i]; k < intfIndex[i+1]; k++) {
-                int intfNode = intfNodes[k] - 1;
-
-                int localOffset = k * operatorDim * sizeof (double);
-
-
-                if (ownedNode == intfNode) {
-                    for (int l = 0; l < operatorDim; l++) {
-                        srcSegment[k*operatorDim+l] =
-                              prec[ownedNode*operatorDim+l];
-                    }
-
-                    gaspi_write_notify (srcSegmentID, localOffset, neighbor,
-                                        destSegmentID, destOffset[i], size,
-                                        sendNotifyID, rank+1, queueID,
-                                        GASPI_BLOCK);
-                    ctr++;
-                    break;
-                }
-            }
-        }
-        if (ctr > DCargs->nbOwnedNodes) break;
     }
 }
 
