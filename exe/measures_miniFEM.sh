@@ -13,21 +13,24 @@ cd $EXE_DIR || exit
 
 for VERSION in 'DC' #'DC_VEC' #'REF' 'COLORING_OMP'
 do
-    for DISTRI in 'XMPI' #'GASPI'
+    for DISTRI in 'GASPI' #'XMPI'
     do
         # Set the environment
-        module load PrgEnv-intel/14.0.1
-        if [ $DISTRI == "XMPI" ]; then
-            module load impi/4.1.1.036
-        elif [ $DISTRI == "GASPI" ]; then
-            module load gpi2/1.1.1
+        module load intel/2015b
+        if [ $DISTRI == "GASPI" ]; then
+            export PATH=$PATH:$HOME/Programs/GPI-2/bin
         fi
 
         for SHARED in 'CILK' #'OMP'
         do
-            BINARY=$EXE_DIR/bin/miniFEM_$VERSION\_$DISTRI\_$SHARED\_TreeCreation
+            BINARY=$EXE_DIR/bin/miniFEM_$VERSION\_$DISTRI\_$SHARED
             if [ $VERSION == "DC_VEC" ]; then
                 BINARY=$BINARY\_$VECTOR_LENGTH
+            fi
+            if [ $DISTRI == "GASPI" ]; then
+                BINARY=$BINARY\_MultithreadedComm_TreeCreation
+            else
+                BINARY=$BINARY\_BulkSynchronous_TreeCreation
             fi
 
             for OPERATOR in 'ela' #'lap'
@@ -46,7 +49,7 @@ do
                     export elemPerPart=$PART_SIZE
 
                     #for NB_PROCESS in $NB_NODES #1 4 8 12 16 32 64 128 256 512
-                    for NB_PROCESS in 1 4 8 #16 32 64 128 256 512
+                    for NB_PROCESS in 4 #4 8 #16 32 64 128 256 512
                     do
                         # Create the GASPI machine file
                         if [ $DISTRI == "GASPI" ]; then
@@ -81,6 +84,6 @@ do
     done
 done
 
-rm $MACHINE_FILE $EXE_FILE
+#rm $MACHINE_FILE $EXE_FILE
 
 exit
