@@ -17,6 +17,7 @@
 #ifdef CILK
     #include <cilk/cilk.h>
 #endif
+#include <iostream>
 
 #include "globals.h"
 #include "halo.h"
@@ -476,6 +477,9 @@ void assembly_lap_seq (void *userArgs, DCargs_t *DCargs)
 void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
 #endif
 {
+
+ cerr << "1.1\n";
+
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
@@ -500,6 +504,8 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             nodeToNodeValue[firstEdge:nbEdges] = 0;
         }
     #endif
+
+ cerr << "1.2\n";
 
     // For each element of the interval
     #ifdef COLORING
@@ -552,6 +558,8 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
+ cerr << "1.3\n";
+
     #ifdef MULTITHREADED_COMM
         double *prec = tmpArgs->prec;
 
@@ -562,6 +570,8 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
             prec[firstNode:nbNodes] = 0;
         }
+
+ cerr << "1.4\n";
 
         // Preconditioner initialization on each node last updated by current leaf
         for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
@@ -574,6 +584,8 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             }
         }
     #endif
+
+ cerr << "1.5\n";
 }
 
 #ifdef COLORING
@@ -615,6 +627,9 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
 {
     // Create the structure containing all the arguments needed for ASM
     userArgs_t userArgs = {
+        #ifdef MULTITHREADED_COMM
+            prec,
+        #endif
         coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
         elemToEdge, operatorDim
     };

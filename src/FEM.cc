@@ -149,6 +149,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     // Main FEM loop
     for (int iter = 0; iter < nbIter; iter++) {
 
+cerr << "1\n";
+
         // Matrix assembly for bulk synchronous version + preconditioner initialization
         // and halo sending for multithreaded version
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
@@ -163,6 +165,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
+cerr << "2\n";
+
         #ifdef BULK_SYNCHRONOUS
             // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
@@ -172,6 +176,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             if (nbIter == 1 || iter > 0) precInitTimer.stop_cycles ();
             if (rank == 0) cout << "done\n";
         #endif
+
+cerr << "3\n";
 
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
@@ -193,6 +199,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
+cerr << "4\n";
+
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";
         if (nbIter == 1 || iter > 0) precInverTimer.start_cycles ();
@@ -200,6 +208,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                         operatorID);
         if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
+
+cerr << "5\n";
+
     }
 
     // Print the average measures

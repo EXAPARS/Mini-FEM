@@ -94,9 +94,6 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
 
 int main (int argCount, char **argValue)
 {
-
-cerr << "1\n";
-
     // Process initialization
     int nbBlocks = 0, rank = 0;
     #ifdef XMPI
@@ -108,8 +105,6 @@ cerr << "1\n";
         gaspi_proc_num ((gaspi_rank_t*)&nbBlocks);
         gaspi_proc_rank ((gaspi_rank_t*)&rank);
     #endif
-
-cerr << "2\n";
 
     // Declarations
     DC_timer timer;
@@ -135,8 +130,6 @@ cerr << "2\n";
         operatorID  = 1;
     }
 
-cerr << "3\n";
-
     // Get the input data from DefMesh
 	if (rank == 0) {
         cout << "Reading input data...                ";
@@ -151,8 +144,6 @@ cerr << "3\n";
         timer.reset_time ();
     }
 
-cerr << "4\n";
-
     // D&C versions
     #if defined (DC) || defined (DC_VEC)
 
@@ -165,8 +156,6 @@ cerr << "4\n";
                               + to_string ((long long)MAX_ELEM_PER_PART) + "_"
                               + to_string ((long long)nbBlocks) + "_"
                               + to_string ((long long)rank);
-
-cerr << "5\n";
 
         // Creation of the D&C tree and permutations
         #ifdef TREE_CREATION
@@ -194,8 +183,6 @@ cerr << "5\n";
                 timer.reset_time ();
             }
         #endif
-
-cerr << "6\n";
 
         // Apply permutations
         if (rank == 0) {
@@ -246,8 +233,6 @@ cerr << "6\n";
         }
     #endif
     delete[] dispList;
-
-cerr << "7\n";
 
     // Create the CSR matrix
     if (rank == 0) {

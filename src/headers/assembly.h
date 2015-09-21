@@ -21,12 +21,12 @@
 
 // Structure containing the user arguments passed to ASM function
 typedef struct userArgs_s {
-    double *coord, *nodeToNodeValue;
-    int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
-    int operatorDim;
     #ifdef MULTITHREADED_COMM
         double *prec;
     #endif
+    double *coord, *nodeToNodeValue;
+    int *nodeToNodeRow, *nodeToNodeColumn, *elemToNode, *elemToEdge;
+    int operatorDim;
 } userArgs_t;
 
 #ifdef DC_VEC
