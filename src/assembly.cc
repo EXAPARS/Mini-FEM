@@ -477,9 +477,6 @@ void assembly_lap_seq (void *userArgs, DCargs_t *DCargs)
 void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
 #endif
 {
-
- cerr << "1.1\n";
-
     // Get user arguments
     userArgs_t *tmpArgs = (userArgs_t*)userArgs;
     double *coord           = tmpArgs->coord,
@@ -504,8 +501,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             nodeToNodeValue[firstEdge:nbEdges] = 0;
         }
     #endif
-
- cerr << "1.2\n";
 
     // For each element of the interval
     #ifdef COLORING
@@ -558,8 +553,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
         #endif
     }
 
- cerr << "1.3\n";
-
     #ifdef MULTITHREADED_COMM
         double *prec = tmpArgs->prec;
 
@@ -570,8 +563,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             int nbNodes   = (DCargs->lastNode + 1) * operatorDim - firstNode;
             prec[firstNode:nbNodes] = 0;
         }
-
- cerr << "1.4\n";
 
         // Preconditioner initialization on each node last updated by current leaf
         for (int i = 0; i < DCargs->nbOwnedNodes; i++) {
@@ -584,8 +575,6 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
             }
         }
     #endif
-
- cerr << "1.5\n";
 }
 
 #ifdef COLORING
@@ -672,7 +661,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     #else
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
-            #ifdef MULTITHREADED_COMM
+/*            #ifdef MULTITHREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_lap_seq, assembly_lap_vec,
                                        GASPI_multithreaded_send, &userArgs,
@@ -682,7 +671,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                                        GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
-            #else
+            #else */
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, nullptr,
                                        &userArgs, nullptr);
@@ -690,11 +679,11 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                     DC_tree_traversal (assembly_lap_seq, nullptr, nullptr, &userArgs,
                                        nullptr);
                 #endif
-            #endif
+//            #endif
         }
         // Using elasticity operator
         else {
-            #ifdef MULTITHREADED_COMM
+ /*           #ifdef MULTITHREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_ela_seq, assembly_ela_vec,
                                        GASPI_multithreaded_send, &userArgs,
@@ -704,7 +693,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                                        GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
-            #else
+            #else */
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, nullptr,
                                        &userArgs, nullptr);
@@ -712,7 +701,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                     DC_tree_traversal (assembly_ela_seq, nullptr, nullptr, &userArgs,
                                        nullptr);
                 #endif
-            #endif
+//            #endif
         }
     #endif
 }

@@ -149,8 +149,6 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
     // Main FEM loop
     for (int iter = 0; iter < nbIter; iter++) {
 
-cerr << "1\n";
-
         // Matrix assembly for bulk synchronous version + preconditioner initialization
         // and halo sending for multithreaded version
         if (rank == 0) cout << iter << ". Matrix assembly...                ";
@@ -165,8 +163,6 @@ cerr << "1\n";
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
-cerr << "2\n";
-
         #ifdef BULK_SYNCHRONOUS
             // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
@@ -177,14 +173,12 @@ cerr << "2\n";
             if (rank == 0) cout << "done\n";
         #endif
 
-cerr << "3\n";
-
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
-        #ifdef MULTITHREADED_COMM
+/*        #ifdef MULTITHREADED_COMM
             // Wait for multithreaded GASPI notifications
             GASPI_multithreaded_wait (nbBlocks);
-        #else
+        #else */
             // Halo exchange
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbBlocks,
@@ -195,11 +189,9 @@ cerr << "3\n";
                                      nbIntf, operatorDim, rank, iter, srcSegmentID,
                                      destSegmentID, queueID);
             #endif
-        #endif
+//        #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
-
-cerr << "4\n";
 
         // Preconditioner inversion
         if (rank == 0) cout << "   Preconditioner inversion...       ";
@@ -208,9 +200,6 @@ cerr << "4\n";
                         operatorID);
         if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
-
-cerr << "5\n";
-
     }
 
     // Print the average measures

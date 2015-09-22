@@ -240,9 +240,6 @@ void GASPI_multithreaded_wait (int nbBlocks)
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
 {
-
-cerr << "1.7.1\n";
-
     // Get user arguments
     userCommArgs_t *tmpCommArgs = (userCommArgs_t*)userCommArgs;
     double *prec       = tmpCommArgs->prec,
@@ -265,25 +262,14 @@ cerr << "1.7.1\n";
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
-cerr << "1.7.2\n";
-
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
-cerr << "1.7.2.1\n";
         int node1       = intfIndex[i];
-cerr << "1.7.2.2\n";
         int node2       = intfIndex[i+1];
-cerr << "1.7.2.3\n";
         int localOffset = node1 * operatorDim * sizeof (double);
-cerr << "1.7.2.4\n";
         int size        = (node2 - node1) * operatorDim * sizeof (double);
-cerr << "1.7.2.5\n";
         int neighbor    = neighborList[i] - 1;
-cerr << "1.7.2.6\n";
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
-cerr << "1.7.2.7\n";
-
-fprintf (stderr, "%d -- %d -- %d\n", i, intfIndex[i], intfIndex[i+1]);
 
         // Initialize source segment
         for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
@@ -293,16 +279,11 @@ fprintf (stderr, "%d -- %d -- %d\n", i, intfIndex[i], intfIndex[i+1]);
             }
         }
 
-cerr << "1.7.2.8\n";
-
         // Send local data to adjacent domain
         gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
                             destOffset[i], size, sendNotifyID, rank+1, queueID,
                             GASPI_BLOCK);
     }
-
-cerr << "1.7.3\n";
-
 }
 
 #endif
