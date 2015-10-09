@@ -174,9 +174,10 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         }
 
         // Send local data to adjacent domain
-        gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
-                            destOffset[i], size, sendNotifyID, rank+1, queueID,
-                            GASPI_BLOCK);
+        SUCCESS_OR_DIE (gaspi_write_notify (srcSegmentID, localOffset, neighbor,
+                                            destSegmentID, destOffset[i], size,
+                                            sendNotifyID, rank+1, queueID,
+                                            GASPI_BLOCK));
     }
 
     // For each interface
@@ -196,9 +197,11 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         // Wait & reset the first incoming notification
         while (1) {
             gaspi_notification_id_t recvNotifyID;
-            gaspi_notify_waitsome (destSegmentID, iter*nbBlocks, nbBlocks,
-                                   &recvNotifyID, GASPI_BLOCK);
-            gaspi_notify_reset (destSegmentID, recvNotifyID, &recvNotifyValue);
+            SUCCESS_OR_DIE (gaspi_notify_waitsome (destSegmentID, iter*nbBlocks,
+                                                   nbBlocks, &recvNotifyID,
+                                                   GASPI_BLOCK));
+            SUCCESS_OR_DIE (gaspi_notify_reset (destSegmentID, recvNotifyID,
+                                                &recvNotifyValue));
             if (recvNotifyValue) break;
         }
 
@@ -256,8 +259,8 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
     const gaspi_queue_id_t queueID         = tmpCommArgs->queueID;
 
     // Get D&C arguments
-    int *intfIndex, *intfNodes, *ownedNodes;
-    int nbOwnedNodes;
+    int *intfIndex = DCcommArgs->intfIndex,
+        *intfNodes = DCcommArgs->intfNodes;
 
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -280,9 +283,10 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         }
 
         // Send local data to adjacent domain
-        gaspi_write_notify (srcSegmentID, localOffset, neighbor, destSegmentID,
-                            destOffset[i], size, sendNotifyID, rank+1, queueID,
-                            GASPI_BLOCK);
+        SUCCESS_OR_DIE (gaspi_write_notify (srcSegmentID, localOffset, neighbor,
+                                            destSegmentID, destOffset[i], size,
+                                            sendNotifyID, rank+1, queueID,
+                                            GASPI_BLOCK));
     }
 }
 

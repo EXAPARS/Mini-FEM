@@ -91,8 +91,9 @@ void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
             MPI_Reduce (localCycles, globalCycles, 4, MPI_UINT64_T, MPI_MAX, 0,
                         MPI_COMM_WORLD);
         #elif GASPI
-            gaspi_allreduce (localCycles, globalCycles, 4, GASPI_OP_MAX,
-                             GASPI_TYPE_ULONG, GASPI_GROUP_ALL, GASPI_BLOCK);
+            SUCCESS_OR_DIE (gaspi_allreduce (localCycles, globalCycles, 4,
+                                             GASPI_OP_MAX, GASPI_TYPE_ULONG,
+                                             GASPI_GROUP_ALL, GASPI_BLOCK));
         #endif
     }
     else {
@@ -175,10 +176,10 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
-/*        #ifdef MULTITHREADED_COMM
+        #ifdef MULTITHREADED_COMM
             // Wait for multithreaded GASPI notifications
             GASPI_multithreaded_wait (nbBlocks);
-        #else */
+        #else
             // Halo exchange
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbBlocks,
@@ -189,7 +190,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                                      nbIntf, operatorDim, rank, iter, srcSegmentID,
                                      destSegmentID, queueID);
             #endif
-//        #endif
+        #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 

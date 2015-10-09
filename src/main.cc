@@ -83,7 +83,7 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
 	}
 
     if (rank == 0) {
-        cout << "\t\t* Mini-App *\n\n"
+        cout << "\t\t* Mini-FEM *\n\n"
             << "Test case              : \"" << meshName << "\"\n"
             << "Operator               : \"" << operatorName << "\"\n"
             << "Elements per partition :  "  << MAX_ELEM_PER_PART << "\n"
@@ -101,9 +101,9 @@ int main (int argCount, char **argValue)
         MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
         MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
-        gaspi_proc_init (GASPI_BLOCK);
-        gaspi_proc_num ((gaspi_rank_t*)&nbBlocks);
-        gaspi_proc_rank ((gaspi_rank_t*)&rank);
+        SUCCESS_OR_DIE (gaspi_proc_init (GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_proc_num ((gaspi_rank_t*)&nbBlocks));
+        SUCCESS_OR_DIE (gaspi_proc_rank ((gaspi_rank_t*)&rank));
     #endif
 
     // Declarations
@@ -362,7 +362,6 @@ int main (int argCount, char **argValue)
     #elif GASPI
         GASPI_finalize (destOffset, nbBlocks, rank, srcSegmentID, destSegmentID,
                         queueID);
-        gaspi_proc_term (GASPI_BLOCK);
     #endif
 
 	return EXIT_SUCCESS;

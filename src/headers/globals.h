@@ -23,6 +23,20 @@
 #define DIM_NODE 3
 #define VALUES_PER_ELEM 16
 
+#define SUCCESS_OR_DIE(f...)                                         \
+do                                                                   \
+{                                                                    \
+    const gaspi_return_t r = f;                                      \
+    if (r != GASPI_SUCCESS)                                          \
+    {                                                                \
+        gaspi_rank_t rank;                                           \
+        gaspi_proc_rank(&rank);                                      \
+        gaspi_printf ("Error rank %d: '%s' [%s:%i]: %i\n", rank, #f, \
+                      __FILE__, __LINE__, r);                        \
+        exit (EXIT_FAILURE);                                         \
+    }                                                                \
+} while (0)
+
 using namespace std;
 
 extern string meshName, operatorName;

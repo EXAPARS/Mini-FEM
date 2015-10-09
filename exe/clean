@@ -1,2 +1,3 @@
-rm miniFEM*.log stdout_* ASM_* Prec_* measures_miniFE.* GASPI_*
+rm miniFEM*.log stdout_* ASM_* Prec_* measures_miniFE.* GASPI_* core.*
 rm elemPerLeaf* colorPerLeaf* elemPerColor* elemToElem* dcTree* 2Dmatrix* intfRatio*
+ps aux | grep miniFEM | cut -d " " -f 2,3 | sed ':a;N;$!ba;s/\n/ /g' | xargs kill -9

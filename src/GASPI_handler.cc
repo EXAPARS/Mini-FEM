@@ -17,9 +17,8 @@
 #ifdef GASPI
 
 #include <iostream>
+#include "globals.h"
 #include "GASPI_handler.h"
-
-using namespace std;
 
 // Free the destination offset array, flush the GASPI queue & free the segments
 void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
@@ -29,21 +28,12 @@ void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
-    gaspi_return_t check;
+    SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
+    SUCCESS_OR_DIE (gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK));
+    SUCCESS_OR_DIE (gaspi_segment_delete (srcSegmentID));
+    SUCCESS_OR_DIE (gaspi_segment_delete (destSegmentID));
+    SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
     delete[] destOffset;
-
-    gaspi_wait (queueID, GASPI_BLOCK);
-    gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK);
-    gaspi_segment_delete (srcSegmentID);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at source segment free from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
-    gaspi_segment_delete (destSegmentID);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at destination segment free from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
 }
 
 // Get the adjacent domains destination offset
@@ -59,12 +49,8 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
         // The +1 is required since a notification value cannot be equal to 0...
         int localOffset = intfIndex[i] * operatorDim * sizeof (double) + 1;
         int dest = neighborList[i] - 1;
-        gaspi_return_t check = gaspi_notify (destSegmentID, dest, rank, localOffset,
-                                             queueID, GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Notify error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+        SUCCESS_OR_DIE (gaspi_notify (destSegmentID, dest, rank, localOffset, queueID,
+                                      GASPI_BLOCK));
     }
 
     // For each interface, receive the destination offset from adjacent domain
@@ -72,19 +58,11 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
         int source = neighborList[i] - 1;
         gaspi_notification_t recvNotifyValue;
         gaspi_notification_id_t recvNotifyID;
-        gaspi_return_t check;
 
-        check = gaspi_notify_waitsome (destSegmentID, source, 1, &recvNotifyID,
-                                       GASPI_BLOCK);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Wait error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
-        check = gaspi_notify_reset (destSegmentID, recvNotifyID, &recvNotifyValue);
-        if (check != GASPI_SUCCESS) {
-            cerr << "Reset error during offset exchange from rank " << rank << endl;
-            exit (EXIT_FAILURE);
-        }
+        SUCCESS_OR_DIE (gaspi_notify_waitsome (destSegmentID, source, 1, &recvNotifyID,
+                                               GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_notify_reset (destSegmentID, recvNotifyID,
+                                            &recvNotifyValue));
 
         // Remove the +1 of the local offset
         destOffset[i] = recvNotifyValue - 1;
@@ -101,35 +79,17 @@ void GASPI_init (double **srcSegment, double **destSegment, int **destOffset,
     if (nbBlocks < 2) return;
 
     gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
-    gaspi_return_t check;
-
     *destOffset = new int [nbIntf];
     *srcSegmentID  = 0;
     *destSegmentID = 1;
     *queueID = 0;
 
-    check = gaspi_segment_create (*srcSegmentID, segmentSize, GASPI_GROUP_ALL,
-                                  GASPI_BLOCK, GASPI_ALLOC_DEFAULT);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at source segment creation from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
-    check = gaspi_segment_create (*destSegmentID, segmentSize, GASPI_GROUP_ALL,
-                                  GASPI_BLOCK, GASPI_ALLOC_DEFAULT);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at destination segment creation from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
-    check = gaspi_segment_ptr (*srcSegmentID, &srcSegmentPtr);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at source segment pointer from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
-    check = gaspi_segment_ptr (*destSegmentID, &destSegmentPtr);
-    if (check != GASPI_SUCCESS) {
-        cerr << "Error at destination segment pointer from rank " << rank << endl;
-        exit (EXIT_FAILURE);
-    }
+    SUCCESS_OR_DIE (gaspi_segment_create (*srcSegmentID, segmentSize, GASPI_GROUP_ALL,
+                                          GASPI_BLOCK, GASPI_ALLOC_DEFAULT));
+    SUCCESS_OR_DIE (gaspi_segment_create (*destSegmentID, segmentSize, GASPI_GROUP_ALL,
+                                          GASPI_BLOCK, GASPI_ALLOC_DEFAULT));
+    SUCCESS_OR_DIE (gaspi_segment_ptr (*srcSegmentID, &srcSegmentPtr));
+    SUCCESS_OR_DIE (gaspi_segment_ptr (*destSegmentID, &destSegmentPtr));
 
     *srcSegment  = (double*)srcSegmentPtr;
     *destSegment = (double*)destSegmentPtr;

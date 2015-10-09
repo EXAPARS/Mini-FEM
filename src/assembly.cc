@@ -661,7 +661,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     #else
         // D&C parallel assembly using laplacian operator
         if (operatorID == 0) {
-/*            #ifdef MULTITHREADED_COMM
+            #ifdef MULTITHREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_lap_seq, assembly_lap_vec,
                                        GASPI_multithreaded_send, &userArgs,
@@ -671,7 +671,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                                        GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
-            #else */
+            #else
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_lap_seq, assembly_lap_vec, nullptr,
                                        &userArgs, nullptr);
@@ -679,11 +679,11 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                     DC_tree_traversal (assembly_lap_seq, nullptr, nullptr, &userArgs,
                                        nullptr);
                 #endif
-//            #endif
+            #endif
         }
         // Using elasticity operator
         else {
- /*           #ifdef MULTITHREADED_COMM
+            #ifdef MULTITHREADED_COMM
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_ela_seq, assembly_ela_vec,
                                        GASPI_multithreaded_send, &userArgs,
@@ -693,7 +693,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                                        GASPI_multithreaded_send, &userArgs,
                                        &userCommArgs);
                 #endif
-            #else */
+            #else
                 #ifdef DC_VEC
                     DC_tree_traversal (assembly_ela_seq, assembly_ela_vec, nullptr,
                                        &userArgs, nullptr);
@@ -701,7 +701,7 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                     DC_tree_traversal (assembly_ela_seq, nullptr, nullptr, &userArgs,
                                        nullptr);
                 #endif
-//            #endif
+            #endif
         }
     #endif
 }
