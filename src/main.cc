@@ -112,7 +112,7 @@ int main (int argCount, char **argValue)
     double *coord = nullptr, *nodeToNodeValue = nullptr, *prec = nullptr;
     int *nodeToNodeRow = nullptr, *nodeToNodeColumn = nullptr, *elemToNode = nullptr,
         *intfIndex = nullptr, *intfNodes = nullptr, *dispList = nullptr,
-        *neighborList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
+        *neighborsList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
         *checkBounds = nullptr, *elemToEdge = nullptr;
     int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
         nbBoundNodes, operatorDim, operatorID, nbIter, error;
@@ -135,7 +135,7 @@ int main (int argCount, char **argValue)
         cout << "Reading input data...                ";
         timer.start_time ();
     }
-	read_input_data (&coord, &elemToNode, &neighborList, &intfIndex, &intfNodes,
+	read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
                      &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
@@ -148,14 +148,10 @@ int main (int argCount, char **argValue)
     #if defined (DC) || defined (DC_VEC)
 
         // Set the path to the D&C tree and permutations
-        #ifdef DC_VEC
-            string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/DC_Vec_"
-        #else
-            string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/DC_"
-        #endif
-                              + to_string ((long long)MAX_ELEM_PER_PART) + "_"
-                              + to_string ((long long)nbBlocks) + "_"
-                              + to_string ((long long)rank);
+        string treePath = (string)DATA_PATH + "/" + meshName + "/DC_tree/"
+                          + to_string ((long long)MAX_ELEM_PER_PART) + "_"
+                          + to_string ((long long)nbBlocks) + "_"
+                          + to_string ((long long)rank);
 
         // Creation of the D&C tree and permutations
         #ifdef TREE_CREATION
@@ -176,7 +172,7 @@ int main (int argCount, char **argValue)
                 cout << "Reading the D&C tree...              ";
                 timer.start_time ();
             }
-            DC_read_tree (treePath, nbElem, nbNodes);
+            DC_read_tree (treePath, nbElem, nbNodes, nbIntf);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -253,14 +249,36 @@ int main (int argCount, char **argValue)
         timer.reset_time ();
     }
 
+    // Initialization of the GASPI library
+    #ifdef GASPI
+        if (rank == 0) {
+            cout << "Initializing GASPI lib...            ";
+            timer.start_time ();
+        }
+        double *srcSegment = nullptr, *destSegment = nullptr;
+        int *intfDestOffsets = nullptr;
+        gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
+        gaspi_segment_id_t srcSegmentID, destSegmentID;
+        gaspi_queue_id_t queueID;
+        GASPI_init (&srcSegment, &destSegment, &intfDestOffsets, nbIntf, nbBlocks,
+                    rank, segmentSize, &srcSegmentID, &destSegmentID, &queueID);
+        GASPI_offset_exchange (intfDestOffsets, intfIndex, neighborsList, nbIntf,
+                               nbBlocks, rank, operatorDim, destSegmentID, queueID);
+        if (rank == 0) {
+            timer.stop_time ();
+            cout << "done  (" << timer.get_avg_time () << " seconds)\n";
+            timer.reset_time ();
+        }
+    #endif
+
     // Finalize and store the D&C tree
     #if (defined (DC) || defined (DC_VEC)) && defined (TREE_CREATION)
         if (rank == 0) {
             cout << "Finalizing the D&C tree...           ";
             timer.start_time ();
         }
-        DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes, DIM_ELEM,
-                          nbBlocks, nbIntf);
+        DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes,
+                          intfDestOffsets, DIM_ELEM, nbBlocks, nbIntf, nbIntfNodes, rank);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -268,7 +286,7 @@ int main (int argCount, char **argValue)
             cout << "Storing the D&C tree...              ";
             timer.start_time ();
         }
-        DC_store_tree (treePath, nbElem, nbNodes);
+        DC_store_tree (treePath, nbElem, nbNodes, nbIntf);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -310,43 +328,21 @@ int main (int argCount, char **argValue)
         timer.reset_time ();
     }
 
-    // Initialization of the GASPI library
-    #ifdef GASPI
-        if (rank == 0) {
-            cout << "Initializing GASPI lib...            ";
-            timer.start_time ();
-        }
-        double *srcSegment = nullptr, *destSegment = nullptr;
-        int *destOffset = nullptr;
-        gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
-        gaspi_segment_id_t srcSegmentID, destSegmentID;
-        gaspi_queue_id_t queueID;
-        GASPI_init (&srcSegment, &destSegment, &destOffset, nbIntf, nbBlocks, rank,
-                    segmentSize, &srcSegmentID, &destSegmentID, &queueID);
-        GASPI_offset_exchange (destOffset, intfIndex, neighborList, nbIntf, nbBlocks,
-                               rank, operatorDim, destSegmentID, queueID);
-        if (rank == 0) {
-            timer.stop_time ();
-    	    cout << "done  (" << timer.get_avg_time () << " seconds)\n";
-            timer.reset_time ();
-        }
-    #endif
-
     // Main loop with assembly, solver & update
     if (rank == 0) cout << "\nMain FEM loop\n";
     nodeToNodeValue = new double [nbEdges * operatorDim];
     prec            = new double [nbNodes * operatorDim];
     FEM_loop (prec, coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
-              elemToNode, elemToEdge, intfIndex, intfNodes, neighborList, checkBounds,
+              elemToNode, elemToEdge, intfIndex, intfNodes, neighborsList, checkBounds,
               nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbIter, nbBlocks, rank,
     #ifdef XMPI
               operatorDim, operatorID);
     #elif GASPI
-              operatorDim, operatorID, srcSegment, destSegment, destOffset,
+              operatorDim, operatorID, srcSegment, destSegment, intfDestOffsets,
               srcSegmentID, destSegmentID, queueID);
     #endif
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
-    delete[] neighborList, delete[] intfNodes, delete[] intfIndex;
+    delete[] neighborsList, delete[] intfNodes, delete[] intfIndex;
     delete[] coord, delete[] elemToNode;
     #ifdef OPTIMIZED
         delete[] elemToEdge; 
@@ -360,7 +356,7 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (destOffset, nbBlocks, rank, srcSegmentID, destSegmentID,
+        GASPI_finalize (intfDestOffsets, nbBlocks, rank, srcSegmentID, destSegmentID,
                         queueID);
     #endif
 

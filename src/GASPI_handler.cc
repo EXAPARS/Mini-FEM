@@ -21,7 +21,7 @@
 #include "GASPI_handler.h"
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
                      gaspi_segment_id_t srcSegmentID, gaspi_segment_id_t destSegmentID,
                      gaspi_queue_id_t queueID)
 {
@@ -33,11 +33,11 @@ void GASPI_finalize (int *destOffset, int nbBlocks, int rank,
     SUCCESS_OR_DIE (gaspi_segment_delete (srcSegmentID));
     SUCCESS_OR_DIE (gaspi_segment_delete (destSegmentID));
     SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
-    delete[] destOffset;
+    delete[] intfDestOffsets;
 }
 
 // Get the adjacent domains destination offset
-void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
+void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighborsList,
                             int nbIntf, int nbBlocks, int rank, int operatorDim,
                             gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 {
@@ -47,15 +47,15 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
     // For each interface, send local offset to adjacent domain
     for (int i = 0; i < nbIntf; i++) {
         // The +1 is required since a notification value cannot be equal to 0...
-        int localOffset = intfIndex[i] * operatorDim * sizeof (double) + 1;
-        int dest = neighborList[i] - 1;
+        int localOffset = intfIndex[i] * operatorDim + 1;
+        int dest = neighborsList[i] - 1;
         SUCCESS_OR_DIE (gaspi_notify (destSegmentID, dest, rank, localOffset, queueID,
                                       GASPI_BLOCK));
     }
 
     // For each interface, receive the destination offset from adjacent domain
     for (int i = 0; i < nbIntf; i++) {
-        int source = neighborList[i] - 1;
+        int source = neighborsList[i] - 1;
         gaspi_notification_t recvNotifyValue;
         gaspi_notification_id_t recvNotifyID;
 
@@ -65,12 +65,12 @@ void GASPI_offset_exchange (int *destOffset, int *intfIndex, int *neighborList,
                                             &recvNotifyValue));
 
         // Remove the +1 of the local offset
-        destOffset[i] = recvNotifyValue - 1;
+        intfDestOffsets[i] = recvNotifyValue - 1;
     }
 }
 
 // Initialization of the GASPI segments & creation of the segment pointers
-void GASPI_init (double **srcSegment, double **destSegment, int **destOffset,
+void GASPI_init (double **srcSegment, double **destSegment, int **intfDestOffsets,
                  int nbIntf, int nbBlocks, int rank, gaspi_size_t segmentSize,
                  gaspi_segment_id_t *srcSegmentID, gaspi_segment_id_t *destSegmentID,
                  gaspi_queue_id_t *queueID)
@@ -79,7 +79,7 @@ void GASPI_init (double **srcSegment, double **destSegment, int **destOffset,
     if (nbBlocks < 2) return;
 
     gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
-    *destOffset = new int [nbIntf];
+    *intfDestOffsets = new int [nbIntf];
     *srcSegmentID  = 0;
     *destSegmentID = 1;
     *queueID = 0;

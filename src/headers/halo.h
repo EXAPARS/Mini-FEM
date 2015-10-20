@@ -27,7 +27,7 @@
     // function
     typedef struct userCommArgs_s {
         double *prec, *srcSegment;
-        int *neighborList, *destOffset;
+        int *neighborsList, *intfDestOffsets;
         int nbBlocks, nbIntf, operatorDim, rank, iter;
         const gaspi_segment_id_t srcSegmentID, destSegmentID;
         const gaspi_queue_id_t queueID;
@@ -38,16 +38,17 @@
 
 // Halo exchange between MPI ranks
 void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
-                        int *neighborList, int nbBlocks, int nbIntf, int nbIntfNodes,
+                        int *neighborsList, int nbBlocks, int nbIntf, int nbIntfNodes,
                         int operatorDim, int rank);
 
 #elif GASPI
 
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
-                          int *intfIndex, int *intfNodes, int *neighborList,
-                          int *destOffset, int nbBlocks, int nbIntf, int operatorDim,
-                          int rank, int iter, const gaspi_segment_id_t segment1,
+                          int *intfIndex, int *intfNodes, int *neighborsList,
+                          int *intfDestOffsets, int nbBlocks, int nbIntf,
+                          int operatorDim, int rank, int iter,
+                          const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID);
 

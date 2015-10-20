@@ -59,7 +59,7 @@ void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
 }
 
 // Read input data from DefMesh
-void read_input_data (double **coord, int **elemToNode, int **neighborList,
+void read_input_data (double **coord, int **elemToNode, int **neighborsList,
                       int **intfIndex, int **intfNodes, int **dispList,
                       int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
                       int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
@@ -84,15 +84,15 @@ void read_input_data (double **coord, int **elemToNode, int **neighborList,
 
     *coord          = new double [(*nbNodes) * DIM_NODE];
     *elemToNode     = new int [(*nbElem) * DIM_ELEM];
-	*neighborList   = new int [max (*nbIntf,1) * 3];
+	*neighborsList  = new int [max (*nbIntf,1) * 3];
 	*intfIndex      = new int [(*nbIntf) + 1];
 	*intfNodes      = new int [*nbIntfNodes];
 	*dispList       = new int [*nbDispNodes];
 	*boundNodesCode = new int [*nbNodes];
 
-	inputFile.read ((char*)*coord,    (*nbNodes) * DIM_NODE * sizeof (double));
-	inputFile.read ((char*)*elemToNode,   (*nbElem) * DIM_ELEM * sizeof (int));
-	inputFile.read ((char*)*neighborList, (max(*nbIntf,1) * 3) * sizeof (int));
+	inputFile.read ((char*)*coord,        (*nbNodes) * DIM_NODE * sizeof (double));
+	inputFile.read ((char*)*elemToNode,    (*nbElem) * DIM_ELEM * sizeof (int));
+	inputFile.read ((char*)*neighborsList, (max(*nbIntf,1) * 3) * sizeof (int));
 	inputFile.read ((char*)*intfIndex,        ((*nbIntf) + 1)  * sizeof (int));
 	inputFile.read ((char*)*intfNodes,         (*nbIntfNodes)  * sizeof (int));
 	inputFile.read ((char*)*dispList,          (*nbDispNodes)  * sizeof (int));
@@ -101,7 +101,7 @@ void read_input_data (double **coord, int **elemToNode, int **neighborList,
 }
 
 // Store necessary data from DefMesh
-void store_input_data_ (double *coord, int *elemToNode, int *neighborList,
+void store_input_data_ (double *coord, int *elemToNode, int *neighborsList,
                         int *intfIndex, int *intfNodes, int *dispList,
                         int *boundNodesCode, int *nbElem, int *dimElem,
                         int *nbNodes, int *dimNode, int *nbEdges, int *nbIntf,
@@ -124,9 +124,9 @@ void store_input_data_ (double *coord, int *elemToNode, int *neighborList,
 	inputFile.write ((char*)nbDispNodes,  sizeof (int));
 	inputFile.write ((char*)nbBoundNodes, sizeof (int));
 
-	inputFile.write ((char*)coord,  (*nbNodes) * (*dimNode) * sizeof (double));
-	inputFile.write ((char*)elemToNode, (*nbElem) * (*dimElem) * sizeof (int));
-	inputFile.write ((char*)neighborList, (max(*nbIntf,1) * 3) * sizeof (int));
+	inputFile.write ((char*)coord,      (*nbNodes) * (*dimNode) * sizeof (double));
+	inputFile.write ((char*)elemToNode,  (*nbElem) * (*dimElem) * sizeof (int));
+	inputFile.write ((char*)neighborsList, (max(*nbIntf,1) * 3) * sizeof (int));
 	inputFile.write ((char*)intfIndex,        ((*nbIntf) + 1)  * sizeof (int));
 	inputFile.write ((char*)intfNodes,         (*nbIntfNodes)  * sizeof (int));
 	inputFile.write ((char*)dispList,          (*nbDispNodes)  * sizeof (int));

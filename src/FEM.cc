@@ -116,14 +116,14 @@ void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
 // Main loop iterating over the 3 main steps of FEM applications
 void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int *nodeToNodeRow, int *nodeToNodeColumn, int *elemToNode,
-               int *elemToEdge, int *intfIndex, int *intfNodes, int *neighborList,
+               int *elemToEdge, int *intfIndex, int *intfNodes, int *neighborsList,
                int *checkBounds, int nbElem, int nbNodes, int nbEdges, int nbIntf,
                int nbIntfNodes, int nbIter, int nbBlocks, int rank, int operatorDim,
 #ifdef XMPI
                int operatorID)
 #elif GASPI
                int operatorID, double *srcSegment, double *destSegment,
-               int *destOffset, gaspi_segment_id_t srcSegmentID,
+               int *intfDestOffsets, gaspi_segment_id_t srcSegmentID,
                gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
@@ -157,7 +157,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
-                  , prec, srcSegment, neighborList, destOffset, nbBlocks, nbIntf,
+                  , prec, srcSegment, neighborsList, intfDestOffsets, nbBlocks, nbIntf,
                   rank, iter, srcSegmentID, destSegmentID, queueID
         #endif
                   );
@@ -182,13 +182,13 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         #else
             // Halo exchange
             #ifdef XMPI
-                MPI_halo_exchange (prec, intfIndex, intfNodes, neighborList, nbBlocks,
+                MPI_halo_exchange (prec, intfIndex, intfNodes, neighborsList, nbBlocks,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
             #elif GASPI
                 GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex,
-                                     intfNodes, neighborList, destOffset, nbBlocks,
-                                     nbIntf, operatorDim, rank, iter, srcSegmentID,
-                                     destSegmentID, queueID);
+                                     intfNodes, neighborsList, intfDestOffsets,
+                                     nbBlocks, nbIntf, operatorDim, rank, iter,
+                                     srcSegmentID, destSegmentID, queueID);
             #endif
         #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
