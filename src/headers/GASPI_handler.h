@@ -28,13 +28,13 @@ void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
 
 // Get the adjacent domains destination offset
 void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighborsList,
-                            int nbIntf, int nbBlocks, int rank, int operatorDim,
+                            int nbIntf, int nbBlocks, int rank,
                             gaspi_segment_id_t destSegmentID,
                             gaspi_queue_id_t queueID);
 
 // Initialization of the GASPI segments & creation of the segment pointers
 void GASPI_init (double **srcSegment, double **destSegment, int **intfDestOffsets,
-                 int nbIntf, int nbBlocks, int rank, gaspi_size_t segmentSize,
+                 int nbIntf, int nbIntfNodes, int nbBlocks, int rank, int operatorDim,
                  gaspi_segment_id_t *srcSegmentID, gaspi_segment_id_t *destSegmentID,
                  gaspi_queue_id_t *queueID);
 

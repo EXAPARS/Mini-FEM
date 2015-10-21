@@ -38,7 +38,7 @@ void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
 
 // Get the adjacent domains destination offset
 void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighborsList,
-                            int nbIntf, int nbBlocks, int rank, int operatorDim,
+                            int nbIntf, int nbBlocks, int rank,
                             gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
@@ -47,7 +47,7 @@ void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighbors
     // For each interface, send local offset to adjacent domain
     for (int i = 0; i < nbIntf; i++) {
         // The +1 is required since a notification value cannot be equal to 0...
-        int localOffset = intfIndex[i] * operatorDim + 1;
+        int localOffset = intfIndex[i] + 1;
         int dest = neighborsList[i] - 1;
         SUCCESS_OR_DIE (gaspi_notify (destSegmentID, dest, rank, localOffset, queueID,
                                       GASPI_BLOCK));
@@ -71,7 +71,7 @@ void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighbors
 
 // Initialization of the GASPI segments & creation of the segment pointers
 void GASPI_init (double **srcSegment, double **destSegment, int **intfDestOffsets,
-                 int nbIntf, int nbBlocks, int rank, gaspi_size_t segmentSize,
+                 int nbIntf, int nbIntfNodes, int nbBlocks, int rank, int operatorDim,
                  gaspi_segment_id_t *srcSegmentID, gaspi_segment_id_t *destSegmentID,
                  gaspi_queue_id_t *queueID)
 {
@@ -79,10 +79,12 @@ void GASPI_init (double **srcSegment, double **destSegment, int **intfDestOffset
     if (nbBlocks < 2) return;
 
     gaspi_pointer_t srcSegmentPtr = NULL, destSegmentPtr = NULL;
+    gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double) +
+                               nbIntfNodes * sizeof (int);
     *intfDestOffsets = new int [nbIntf];
-    *srcSegmentID  = 0;
-    *destSegmentID = 1;
-    *queueID = 0;
+    *srcSegmentID    = 0;
+    *destSegmentID   = 1;
+    *queueID         = 0;
 
     SUCCESS_OR_DIE (gaspi_segment_create (*srcSegmentID, segmentSize, GASPI_GROUP_ALL,
                                           GASPI_BLOCK, GASPI_ALLOC_DEFAULT));

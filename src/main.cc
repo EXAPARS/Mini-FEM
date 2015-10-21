@@ -257,13 +257,13 @@ int main (int argCount, char **argValue)
         }
         double *srcSegment = nullptr, *destSegment = nullptr;
         int *intfDestOffsets = nullptr;
-        gaspi_size_t segmentSize = nbIntfNodes * operatorDim * sizeof (double);
         gaspi_segment_id_t srcSegmentID, destSegmentID;
         gaspi_queue_id_t queueID;
-        GASPI_init (&srcSegment, &destSegment, &intfDestOffsets, nbIntf, nbBlocks,
-                    rank, segmentSize, &srcSegmentID, &destSegmentID, &queueID);
+        GASPI_init (&srcSegment, &destSegment, &intfDestOffsets, nbIntf, nbIntfNodes,
+                    nbBlocks, rank, operatorDim, &srcSegmentID, &destSegmentID,
+                    &queueID);
         GASPI_offset_exchange (intfDestOffsets, intfIndex, neighborsList, nbIntf,
-                               nbBlocks, rank, operatorDim, destSegmentID, queueID);
+                               nbBlocks, rank, destSegmentID, queueID);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
