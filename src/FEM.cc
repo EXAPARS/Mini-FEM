@@ -122,9 +122,12 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 #ifdef XMPI
                int operatorID)
 #elif GASPI
-               int operatorID, double *srcSegment, double *destSegment,
-               int *intfDestOffsets, gaspi_segment_id_t srcSegmentID,
-               gaspi_segment_id_t destSegmentID, gaspi_queue_id_t queueID)
+               int operatorID, double *srcDataSegment, double *destDataSegment,
+               int *srcOffsetSegment, int *destOffsetSegment, int *intfDestOffsets,
+               gaspi_segment_id_t srcDataSegmentID,
+               gaspi_segment_id_t destDataSegmentID,
+               gaspi_segment_id_t srcOffsetSegmentID,
+               gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
     DC_timer ASMtimer, precInitTimer, haloTimer, precInverTimer;
@@ -157,8 +160,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
-                  , prec, srcSegment, neighborsList, intfDestOffsets, nbBlocks, nbIntf,
-                  rank, iter, srcSegmentID, destSegmentID, queueID
+                  , prec, srcDataSegment, srcOffsetSegment, neighborsList,
+                  intfDestOffsets, nbBlocks, nbIntf, rank, iter, srcDataSegmentID,
+                  destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
@@ -185,10 +189,10 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborsList, nbBlocks,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
             #elif GASPI
-                GASPI_halo_exchange (prec, srcSegment, destSegment, intfIndex,
+                GASPI_halo_exchange (prec, srcDataSegment, destDataSegment, intfIndex,
                                      intfNodes, neighborsList, intfDestOffsets,
                                      nbBlocks, nbIntf, operatorDim, rank, iter,
-                                     srcSegmentID, destSegmentID, queueID);
+                                     srcDataSegmentID, destDataSegmentID, queueID);
             #endif
         #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();

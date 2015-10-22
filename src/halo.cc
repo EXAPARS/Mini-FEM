@@ -36,16 +36,16 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
     if (nbBlocks < 2) return;
 
     // Initialize communication buffers
-    double *bufferSend = new double [nbIntfNodes*operatorDim];
-    double *bufferRecv = new double [nbIntfNodes*operatorDim];
+    double *bufferSend = new double [nbIntfNodes*operatorDim],
+           *bufferRecv = new double [nbIntfNodes*operatorDim];
 
     // Initialize reception from adjacent domains
     for (int i = 0; i < nbIntf; i++) {
-        int node1  = intfIndex[i];
-        int node2  = intfIndex[i+1];
-        int size   = (node2 - node1) * operatorDim;
-        int source = neighborsList[i] - 1;
-        int tag    = neighborsList[i] + 100;
+        int node1  = intfIndex[i],
+            node2  = intfIndex[i+1],
+            size   = (node2 - node1) * operatorDim,
+            source = neighborsList[i] - 1,
+            tag    = neighborsList[i] + 100;
         MPI_Irecv (&(bufferRecv[node1*operatorDim]), size, MPI_DOUBLE, source, tag,
                    MPI_COMM_WORLD, &(neighborsList[2*nbIntf+i]));
     }
@@ -74,11 +74,11 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 
     // Sending local data to adjacent domains
     for (int i = 0; i < nbIntf; i++) {
-        int node1 = intfIndex[i];
-        int node2 = intfIndex[i+1];
-        int size  = (node2 - node1) * operatorDim;
-        int dest  = neighborsList[i] - 1;
-        int tag   = rank + 101;
+        int node1 = intfIndex[i],
+            node2 = intfIndex[i+1],
+            size  = (node2 - node1) * operatorDim,
+            dest  = neighborsList[i] - 1,
+            tag   = rank + 101;
         MPI_Send (&(bufferSend[node1*operatorDim]), size, MPI_DOUBLE, dest, tag,
                   MPI_COMM_WORLD);
     }
@@ -117,10 +117,10 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 #elif GASPI
 
 // Halo exchange between GASPI ranks
-void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
-                          int *intfIndex, int *intfNodes, int *neighborsList,
-                          int *intfDestOffsets, int nbBlocks, int nbIntf,
-                          int operatorDim, int rank, int iter,
+void GASPI_halo_exchange (double *prec, double *srcDataSegment,
+                          double *destDataSegment, int *intfIndex, int *intfNodes,
+                          int *neighborsList, int *intfDestOffsets, int nbBlocks,
+                          int nbIntf, int operatorDim, int rank, int iter,
                           const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
                           const gaspi_queue_id_t queueID)
@@ -129,14 +129,14 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
     if (nbBlocks < 2) return;
 
     // Double buffering flip/flop
-    gaspi_segment_id_t srcSegmentID, destSegmentID;
+    gaspi_segment_id_t srcDataSegmentID, destDataSegmentID;
     if ((segment1 % 2) == 0) {
-        srcSegmentID  = segment1;
-        destSegmentID = segment2;
+        srcDataSegmentID  = segment1;
+        destDataSegmentID = segment2;
     }
     else {
-        srcSegmentID  = segment2;
-        destSegmentID = segment1;
+        srcDataSegmentID  = segment2;
+        destDataSegmentID = segment1;
     }
 
     // For each interface
@@ -150,34 +150,34 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
             cilk_for (int i = 0; i < nbIntf; i++) {
         #endif
     #endif
-        int node1       = intfIndex[i];
-        int node2       = intfIndex[i+1];
-        int size        = (node2 - node1)    * operatorDim * sizeof (double);
-        int localOffset = node1              * operatorDim * sizeof (double);
-        int destOffset  = intfDestOffsets[i] * operatorDim * sizeof (double);
-        int neighbor    = neighborsList[i] - 1;
+        int node1       = intfIndex[i],
+            node2       = intfIndex[i+1],
+            size        = (node2 - node1)    * operatorDim * sizeof (double),
+            localOffset = node1              * operatorDim * sizeof (double),
+            destOffset  = intfDestOffsets[i] * operatorDim * sizeof (double),
+            neighbor    = neighborsList[i] - 1;
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
 
         // Initialize source segment
         #ifdef REF
-            for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+            for (int j = node1; j < node2; j++) {
         #else
             #ifdef OMP
                 #pragma omp parallel for
-                for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+                for (int j = node1; j < node2; j++) {
             #elif CILK
-                cilk_for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+                cilk_for (int j = node1; j < node2; j++) {
             #endif
         #endif
             int tmpNode = intfNodes[j] - 1;
             for (int k = 0; k < operatorDim; k++) {
-                srcSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                srcDataSegment[j*operatorDim+k] = prec[tmpNode*operatorDim+k];
             }
         }
 
         // Send local data to adjacent domain
-        SUCCESS_OR_DIE (gaspi_write_notify (srcSegmentID, localOffset, neighbor,
-                                            destSegmentID, destOffset, size,
+        SUCCESS_OR_DIE (gaspi_write_notify (srcDataSegmentID, localOffset, neighbor,
+                                            destDataSegmentID, destOffset, size,
                                             sendNotifyID, rank+1, queueID,
                                             GASPI_BLOCK));
     }
@@ -199,10 +199,10 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         // Wait & reset the first incoming notification
         while (1) {
             gaspi_notification_id_t recvNotifyID;
-            SUCCESS_OR_DIE (gaspi_notify_waitsome (destSegmentID, iter*nbBlocks,
+            SUCCESS_OR_DIE (gaspi_notify_waitsome (destDataSegmentID, iter*nbBlocks,
                                                    nbBlocks, &recvNotifyID,
                                                    GASPI_BLOCK));
-            SUCCESS_OR_DIE (gaspi_notify_reset (destSegmentID, recvNotifyID,
+            SUCCESS_OR_DIE (gaspi_notify_reset (destDataSegmentID, recvNotifyID,
                                                 &recvNotifyValue));
             if (recvNotifyValue) break;
         }
@@ -225,7 +225,7 @@ void GASPI_halo_exchange (double *prec, double *srcSegment, double *destSegment,
         #endif
             int tmpNode = intfNodes[j] - 1;
             for (int k = 0; k < operatorDim; k++) {
-                prec[tmpNode*operatorDim+k] += destSegment[j*operatorDim+k];
+                prec[tmpNode*operatorDim+k] += destDataSegment[j*operatorDim+k];
             }
         }
     }
@@ -246,17 +246,20 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
 {
     // Get user arguments
     userCommArgs_t *tmpCommArgs = (userCommArgs_t*)userCommArgs;
-    double *prec       = tmpCommArgs->prec,
-           *srcSegment = tmpCommArgs->srcSegment;
-    int *neighborsList = tmpCommArgs->neighborsList;
-    int nbBlocks       = tmpCommArgs->nbBlocks,
-        nbIntf         = tmpCommArgs->nbIntf,
-        operatorDim    = tmpCommArgs->operatorDim,
-        rank           = tmpCommArgs->rank,
-        iter           = tmpCommArgs->iter;
-    const gaspi_segment_id_t srcSegmentID  = tmpCommArgs->srcSegmentID,
-                             destSegmentID = tmpCommArgs->destSegmentID;
-    const gaspi_queue_id_t queueID         = tmpCommArgs->queueID;
+    double *prec           = tmpCommArgs->prec,
+           *srcDataSegment = tmpCommArgs->srcDataSegment;
+    int  *srcOffsetSegment = tmpCommArgs->srcOffsetSegment,
+         *neighborsList    = tmpCommArgs->neighborsList;
+    int nbBlocks           = tmpCommArgs->nbBlocks,
+        nbIntf             = tmpCommArgs->nbIntf,
+        operatorDim        = tmpCommArgs->operatorDim,
+        rank               = tmpCommArgs->rank,
+        iter               = tmpCommArgs->iter;
+    const gaspi_segment_id_t srcDataSegmentID    = tmpCommArgs->srcDataSegmentID,
+                             destDataSegmentID   = tmpCommArgs->destDataSegmentID,
+                             srcOffsetSegmentID  = tmpCommArgs->srcOffsetSegmentID,
+                             destOffsetSegmentID = tmpCommArgs->destOffsetSegmentID;
+    const gaspi_queue_id_t queueID = tmpCommArgs->queueID;
 
     // Get D&C arguments
     int *intfIndex = DCcommArgs->intfIndex,
@@ -269,25 +272,38 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
 
     // For each interface
     for (int i = 0; i < nbIntf; i++) {
-        int node1    = intfIndex[i];
-        int node2    = intfIndex[i+1];
-        int size     = (node2 - node1)      * operatorDim * sizeof (double);
-        int offset   = (intfOffset + node1) * operatorDim * sizeof (double);
-        int neighbor = neighborsList[i] - 1;
+        int node1 = intfIndex[i],
+            node2 = intfIndex[i+1],
+            dataSegmentSize     = (node2 - node1)      * operatorDim * sizeof (double),
+            dataSegmentOffset   = (intfOffset + node1) * operatorDim * sizeof (double),
+            offsetSegmentSize   = (node2 - node1)      * sizeof (int),
+            offsetSegmentOffset = (intfOffset + node1) * sizeof (int),
+            neighbor = neighborsList[i] - 1;
         gaspi_notification_id_t sendNotifyID = iter * nbBlocks + rank;
 
         // Initialize source segment
-        for (int j = intfIndex[i]; j < intfIndex[i+1]; j++) {
+        for (int j = node1; j < node2; j++) {
             int tmpNode = intfNodes[j] - 1;
             for (int k = 0; k < operatorDim; k++) {
-                srcSegment[(intfOffset+j)*operatorDim+k] = prec[tmpNode*operatorDim+k];
+                srcDataSegment[(intfOffset+j)*operatorDim+k] =
+                          prec[tmpNode*operatorDim+k];
             }
+            srcOffsetSegment[intfOffset+j] = intfDest[j];
         }
 /*
         // Send local data to adjacent domain
-        SUCCESS_OR_DIE (gaspi_write_notify (srcSegmentID, offset, neighbor,
-                                            destSegmentID, offset, size, sendNotifyID,
-                                            rank+1, queueID, GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_write_notify (srcDataSegmentID, dataSegmentOffset,
+                                            neighbor, destDataSegmentID,
+                                            dataSegmentOffset, dataSegmentSize,
+                                            sendNotifyID, rank+1, queueID,
+                                            GASPI_BLOCK));
+
+        // Send data destination to adjacent domain
+        SUCCESS_OR_DIE (gaspi_write_notify (srcOffsetSegmentID, offsetSegmentOffset,
+                                            neighbor, destOffsetSegmentID,
+                                            offsetSegmentOffset, offsetSegmentSize,
+                                            sendNotifyID, rank+1, queueID,
+                                            GASPI_BLOCK));
 */
     }
 }

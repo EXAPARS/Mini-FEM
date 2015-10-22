@@ -255,15 +255,18 @@ int main (int argCount, char **argValue)
             cout << "Initializing GASPI lib...            ";
             timer.start_time ();
         }
-        double *srcSegment = nullptr, *destSegment = nullptr;
-        int *intfDestOffsets = nullptr;
-        gaspi_segment_id_t srcSegmentID, destSegmentID;
+        double *srcDataSegment = nullptr,   *destDataSegment = nullptr;
+        int  *srcOffsetSegment = nullptr, *destOffsetSegment = nullptr,
+              *intfDestOffsets = nullptr;
+        gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
+                         srcOffsetSegmentID, destOffsetSegmentID;
         gaspi_queue_id_t queueID;
-        GASPI_init (&srcSegment, &destSegment, &intfDestOffsets, nbIntf, nbIntfNodes,
-                    nbBlocks, rank, operatorDim, &srcSegmentID, &destSegmentID,
-                    &queueID);
+        GASPI_init (&srcDataSegment, &destDataSegment, &srcOffsetSegment,
+                    &destOffsetSegment, &intfDestOffsets, nbIntf, nbIntfNodes,
+                    nbBlocks, rank, operatorDim, &srcDataSegmentID, &destDataSegmentID,
+                    &srcOffsetSegmentID, &destOffsetSegmentID, &queueID);
         GASPI_offset_exchange (intfDestOffsets, intfIndex, neighborsList, nbIntf,
-                               nbBlocks, rank, destSegmentID, queueID);
+                               nbBlocks, rank, destOffsetSegmentID, queueID);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -338,8 +341,9 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
               operatorDim, operatorID);
     #elif GASPI
-              operatorDim, operatorID, srcSegment, destSegment, intfDestOffsets,
-              srcSegmentID, destSegmentID, queueID);
+              operatorDim, operatorID, srcDataSegment, destDataSegment,
+              srcOffsetSegment, destOffsetSegment, intfDestOffsets, srcDataSegmentID,
+              destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID);
     #endif
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
     delete[] neighborsList, delete[] intfNodes, delete[] intfIndex;
@@ -356,7 +360,8 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (intfDestOffsets, nbBlocks, rank, srcSegmentID, destSegmentID,
+        GASPI_finalize (intfDestOffsets, nbBlocks, rank, srcDataSegmentID,
+                        destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID,
                         queueID);
     #endif
 
