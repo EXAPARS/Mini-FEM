@@ -38,6 +38,8 @@
 #include "assembly.h"
 #include "FEM.h"
 
+#include <unistd.h>
+
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size)
 {
@@ -58,9 +60,13 @@ void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNo
     MatrixNorm = compute_double_norm (nodeToNodeValue, nbEdges*operatorDim);
     precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
 
-    if (rank == 0) {
-        cout << "Numerical stability\n" << setprecision (3);
-        cout << "----------------------------------------------\n";
+    if (rank == 1) sleep (1);
+    if (rank == 2) sleep (2);
+    if (rank == 3) sleep (3);
+
+//    if (rank == 0) {
+        cout << "Numerical stability of rank " << rank << endl << setprecision (3);
+        cout << "----------------------------------------------" << endl;
         cout << "  Matrix -> reference norm : " << refMatrixNorm << endl
              << "              current norm : " << MatrixNorm << endl
              << "                difference : " << abs (refMatrixNorm - MatrixNorm) /
@@ -71,8 +77,8 @@ void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNo
              << "                difference : " << abs (refPrecNorm - precNorm) /
                                                         refPrecNorm
              << endl;
-        cout << "----------------------------------------------\n";
-    }
+        cout << "----------------------------------------------" << endl;
+//    }
 }
 
 // Get the average measures from all ranks and keep the max
@@ -122,9 +128,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 #ifdef XMPI
                int operatorID)
 #elif GASPI
-               int operatorID, double *srcDataSegment, double *destDataSegment,
-               int *srcOffsetSegment, int *destOffsetSegment, int *intfDestOffsets,
-               gaspi_segment_id_t srcDataSegmentID,
+               int operatorID, int nbNotifications, double *srcDataSegment,
+               double *destDataSegment, int *srcOffsetSegment, int *destOffsetSegment,
+               int *intfDestIndex, gaspi_segment_id_t srcDataSegmentID,
                gaspi_segment_id_t destDataSegmentID,
                gaspi_segment_id_t srcOffsetSegmentID,
                gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID)
@@ -161,7 +167,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
                   , prec, srcDataSegment, srcOffsetSegment, neighborsList,
-                  intfDestOffsets, nbBlocks, nbIntf, rank, iter, srcDataSegmentID,
+                  intfDestIndex, nbBlocks, nbIntf, rank, iter, srcDataSegmentID,
                   destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID
         #endif
                   );
@@ -182,7 +188,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
         #ifdef MULTITHREADED_COMM
             // Wait for multithreaded GASPI notifications
-            GASPI_multithreaded_wait (nbBlocks);
+            GASPI_multithreaded_wait (prec, destDataSegment, intfNodes,
+                                      destOffsetSegment, nbNotifications, nbBlocks,
+                                      operatorDim, iter, destOffsetSegmentID, rank, nbIntfNodes);
         #else
             // Halo exchange
             #ifdef XMPI
@@ -190,7 +198,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
             #elif GASPI
                 GASPI_halo_exchange (prec, srcDataSegment, destDataSegment, intfIndex,
-                                     intfNodes, neighborsList, intfDestOffsets,
+                                     intfNodes, neighborsList, intfDestIndex,
                                      nbBlocks, nbIntf, operatorDim, rank, iter,
                                      srcDataSegmentID, destDataSegmentID, queueID);
             #endif

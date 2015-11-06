@@ -16,12 +16,11 @@
 
 #ifdef GASPI
 
-#include <iostream>
 #include "globals.h"
 #include "GASPI_handler.h"
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
                      gaspi_segment_id_t srcDataSegmentID,
                      gaspi_segment_id_t destDataSegmentID,
                      gaspi_segment_id_t srcOffsetSegmentID,
@@ -30,7 +29,7 @@ void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
-    delete[] intfDestOffsets;
+    delete[] intfDestIndex;
 
     SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
     SUCCESS_OR_DIE (gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK));
@@ -41,8 +40,39 @@ void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
     SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
 }
 
+// Get the number of notifications coming from adjacent domains
+void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
+                                      int *nbNotifications, int nbIntf, int nbBlocks,
+                                      int rank, gaspi_segment_id_t destOffsetSegmentID,
+                                      gaspi_queue_id_t queueID)
+{
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
+    // For each interface, send the number of notifications
+    for (int i = 0; i < nbIntf; i++) {
+        // The +1 is required since a notification value cannot be equal to 0...
+        SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, neighborsList[i]-1, rank,
+                                      nbDCcomm[i]+1, queueID, GASPI_BLOCK));
+    }
+
+    // For each interface, receive the number of notifications coming from adjacent
+    // domain
+    for (int i = 0; i < nbIntf; i++) {
+        gaspi_notification_t notifyValue;
+        gaspi_notification_id_t notifyID;
+        SUCCESS_OR_DIE (gaspi_notify_waitsome (destOffsetSegmentID, neighborsList[i]-1,
+                                               1, &notifyID, GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, notifyID,
+                                            &notifyValue));
+
+        // Remove the +1 of the local offset
+        (*nbNotifications) += (notifyValue - 1);
+    }
+}
+
 // Get the adjacent domains destination offset
-void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighborsList,
+void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsList,
                             int nbIntf, int nbBlocks, int rank,
                             gaspi_segment_id_t destOffsetSegmentID,
                             gaspi_queue_id_t queueID)
@@ -53,32 +83,35 @@ void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighbors
     // For each interface, send local offset to adjacent domain
     for (int i = 0; i < nbIntf; i++) {
         // The +1 is required since a notification value cannot be equal to 0...
-        int localOffset = intfIndex[i] + 1;
-        int dest = neighborsList[i] - 1;
-        SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, dest, rank, localOffset,
-                                      queueID, GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, neighborsList[i]-1, rank,
+                                      intfIndex[i]+1, queueID, GASPI_BLOCK));
+
+if (rank == 2)
+fprintf (stderr, "%d: mon intf %d avec le rang %d: [%d;%d]\n", rank, i,
+         neighborsList[i]-1, intfIndex[i], intfIndex[i+1]-1);
     }
 
     // For each interface, receive the destination offset from adjacent domain
     for (int i = 0; i < nbIntf; i++) {
-        int source = neighborsList[i] - 1;
-        gaspi_notification_t recvNotifyValue;
-        gaspi_notification_id_t recvNotifyID;
+        gaspi_notification_t notifyValue;
+        gaspi_notification_id_t notifyID;
+        SUCCESS_OR_DIE (gaspi_notify_waitsome (destOffsetSegmentID, neighborsList[i]-1,
+                                               1, &notifyID, GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, notifyID,
+                                            &notifyValue));
 
-        SUCCESS_OR_DIE (gaspi_notify_waitsome (destOffsetSegmentID, source, 1,
-                                               &recvNotifyID, GASPI_BLOCK));
-        SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, recvNotifyID,
-                                            &recvNotifyValue));
+if (notifyID == 2)
+fprintf (stderr, "%d: le rang %d m'a envoyé %d\n", rank, notifyID, notifyValue-1);
 
         // Remove the +1 of the local offset
-        intfDestOffsets[i] = recvNotifyValue - 1;
+        intfDestIndex[i] = notifyValue - 1;
     }
 }
 
 // Initialization of the GASPI segments & creation of the segment pointers
 void GASPI_init (double **srcDataSegment, double **destDataSegment,
                  int **srcOffsetSegment, int **destOffsetSegment,
-                 int **intfDestOffsets, int nbIntf, int nbIntfNodes, int nbBlocks,
+                 int **intfDestIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
                  int rank, int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
                  gaspi_segment_id_t *destDataSegmentID,
                  gaspi_segment_id_t *srcOffsetSegmentID,
@@ -86,12 +119,13 @@ void GASPI_init (double **srcDataSegment, double **destDataSegment,
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
-    *intfDestOffsets = new int [nbIntf];
+    *intfDestIndex = new int [nbIntf];
 
     gaspi_pointer_t srcDataSegmentPtr = NULL, destDataSegmentPtr = NULL,
                   srcOffsetSegmentPtr = NULL, destOffsetSegmentPtr = NULL;
     gaspi_size_t dataSegmentSize = nbIntfNodes * operatorDim * sizeof (double),
                offsetSegmentSize = nbIntfNodes * sizeof (int);
+
     *srcDataSegmentID    = 0;
     *destDataSegmentID   = 1;
     *srcOffsetSegmentID  = 3;

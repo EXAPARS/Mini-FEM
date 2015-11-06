@@ -27,7 +27,7 @@
     // function
     typedef struct userCommArgs_s {
         double *prec, *srcDataSegment;
-        int *srcOffsetSegment, *neighborsList, *intfDestOffsets;
+        int *srcOffsetSegment, *neighborsList, *intfDestIndex;
         int nbBlocks, nbIntf, operatorDim, rank, iter;
         const gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
                                  srcOffsetSegmentID, destOffsetSegmentID;
@@ -47,7 +47,7 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, double *srcDataSegment,
                           double *destDataSegment, int *intfIndex, int *intfNodes,
-                          int *neighborsList, int *intfDestOffsets, int nbBlocks,
+                          int *neighborsList, int *intfDestIndex, int nbBlocks,
                           int nbIntf, int operatorDim, int rank, int iter,
                           const gaspi_segment_id_t segment1,
                           const gaspi_segment_id_t segment2,
@@ -57,7 +57,10 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
 #ifdef MULTITHREADED_COMM
 
 // Wait for multithreaded GASPI notifications
-void GASPI_multithreaded_wait (int nbBlocks);
+void GASPI_multithreaded_wait (double *prec, double *destDataSegment, int *intfNodes,
+                               int *destOffsetSegment, int nbNotifications,
+                               int nbBlocks, int operatorDim, int iter,
+                               gaspi_segment_id_t destOffsetSegmentID, int rank, int nbIntfNodes);
 
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs);

@@ -83,20 +83,20 @@ void read_input_data (double **coord, int **elemToNode, int **neighborsList,
 	inputFile.read ((char*)nbBoundNodes, sizeof (int));
 
     *coord          = new double [(*nbNodes) * DIM_NODE];
-    *elemToNode     = new int [(*nbElem) * DIM_ELEM];
-	*neighborsList  = new int [max (*nbIntf,1) * 3];
-	*intfIndex      = new int [(*nbIntf) + 1];
-	*intfNodes      = new int [*nbIntfNodes];
-	*dispList       = new int [*nbDispNodes];
-	*boundNodesCode = new int [*nbNodes];
+    *elemToNode     = new int    [(*nbElem)  * DIM_ELEM];
+	*neighborsList  = new int    [max (*nbIntf,1) * 3];
+	*intfIndex      = new int    [(*nbIntf) + 1];
+	*intfNodes      = new int    [*nbIntfNodes];
+	*dispList       = new int    [*nbDispNodes];
+	*boundNodesCode = new int    [*nbNodes];
 
 	inputFile.read ((char*)*coord,        (*nbNodes) * DIM_NODE * sizeof (double));
 	inputFile.read ((char*)*elemToNode,    (*nbElem) * DIM_ELEM * sizeof (int));
 	inputFile.read ((char*)*neighborsList, (max(*nbIntf,1) * 3) * sizeof (int));
-	inputFile.read ((char*)*intfIndex,        ((*nbIntf) + 1)  * sizeof (int));
-	inputFile.read ((char*)*intfNodes,         (*nbIntfNodes)  * sizeof (int));
-	inputFile.read ((char*)*dispList,          (*nbDispNodes)  * sizeof (int));
-	inputFile.read ((char*)*boundNodesCode,    (*nbNodes)      * sizeof (int));
+	inputFile.read ((char*)*intfIndex,        ((*nbIntf) + 1)   * sizeof (int));
+	inputFile.read ((char*)*intfNodes,         (*nbIntfNodes)   * sizeof (int));
+	inputFile.read ((char*)*dispList,          (*nbDispNodes)   * sizeof (int));
+	inputFile.read ((char*)*boundNodesCode,    (*nbNodes)       * sizeof (int));
 	inputFile.close ();
 }
 
@@ -127,9 +127,9 @@ void store_input_data_ (double *coord, int *elemToNode, int *neighborsList,
 	inputFile.write ((char*)coord,      (*nbNodes) * (*dimNode) * sizeof (double));
 	inputFile.write ((char*)elemToNode,  (*nbElem) * (*dimElem) * sizeof (int));
 	inputFile.write ((char*)neighborsList, (max(*nbIntf,1) * 3) * sizeof (int));
-	inputFile.write ((char*)intfIndex,        ((*nbIntf) + 1)  * sizeof (int));
-	inputFile.write ((char*)intfNodes,         (*nbIntfNodes)  * sizeof (int));
-	inputFile.write ((char*)dispList,          (*nbDispNodes)  * sizeof (int));
-	inputFile.write ((char*)boundNodesCode,    (*nbNodes)      * sizeof (int));
+	inputFile.write ((char*)intfIndex,        ((*nbIntf) + 1)   * sizeof (int));
+	inputFile.write ((char*)intfNodes,         (*nbIntfNodes)   * sizeof (int));
+	inputFile.write ((char*)dispList,          (*nbDispNodes)   * sizeof (int));
+	inputFile.write ((char*)boundNodesCode,    (*nbNodes)       * sizeof (int));
 	inputFile.close ();
 }

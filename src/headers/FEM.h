@@ -43,9 +43,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 #ifdef XMPI
                int operatorID);
 #elif GASPI
-               int operatorID, double *srcDataSegment, double *destDataSegment,
-               int *srcOffsetSegment, int *destOffsetSegment, int *intfDestOffsets,
-               gaspi_segment_id_t srcDataSegmentID,
+               int operatorID, int nbNotifications, double *srcDataSegment,
+               double *destDataSegment, int *srcOffsetSegment, int *destOffsetSegment,
+               int *intfDestIndex, gaspi_segment_id_t srcDataSegmentID,
                gaspi_segment_id_t destDataSegmentID,
                gaspi_segment_id_t srcOffsetSegmentID,
                gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID);

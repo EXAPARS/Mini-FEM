@@ -30,14 +30,6 @@
 #include "coloring.h"
 #include "IO.h"
 
-// External Fortran functions
-extern "C" {
-	void dqmrd4_ (int *nbNodes, int *boundNodesCode, int *nbBoundNodes,
-				  int *boundNodesList, int *error);
-	void e_essbcm_(int *dimNode, int *nbNodes, int *nbBoundNodes,
-				   int *boundNodesList, int *boundNodesCode, int *checkBounds);
-}
-
 // Global variables
 string meshName, operatorName;
 int *colorToElem = nullptr;
@@ -115,7 +107,7 @@ int main (int argCount, char **argValue)
         *neighborsList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
         *checkBounds = nullptr, *elemToEdge = nullptr;
     int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, nbIter, error;
+        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbNotifications = 0;
 
     // Arguments initialization
     check_args (argCount, argValue, &nbIter, rank);
@@ -131,13 +123,14 @@ int main (int argCount, char **argValue)
     }
 
     // Get the input data from DefMesh
-	if (rank == 0) {
+    if (rank == 0) {
         cout << "Reading input data...                ";
         timer.start_time ();
     }
-	read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
+    read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
                      &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
+    delete[] dispList;
     if (rank == 0) {
         timer.stop_time ();
         cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -191,8 +184,6 @@ int main (int argCount, char **argValue)
         #endif
         DC_renumber_int_array (elemToNode, nbElem * DIM_ELEM, true);
         DC_renumber_int_array (intfNodes, nbIntfNodes, true);
-        DC_renumber_int_array (dispList, nbDispNodes, true);
-        DC_permute_int_1d_array (boundNodesCode, nbNodes);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -228,7 +219,6 @@ int main (int argCount, char **argValue)
             timer.reset_time ();
         }
     #endif
-    delete[] dispList;
 
     // Create the CSR matrix
     if (rank == 0) {
@@ -257,15 +247,15 @@ int main (int argCount, char **argValue)
         }
         double *srcDataSegment = nullptr,   *destDataSegment = nullptr;
         int  *srcOffsetSegment = nullptr, *destOffsetSegment = nullptr,
-              *intfDestOffsets = nullptr;
+                *intfDestIndex = nullptr;
         gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
                          srcOffsetSegmentID, destOffsetSegmentID;
         gaspi_queue_id_t queueID;
         GASPI_init (&srcDataSegment, &destDataSegment, &srcOffsetSegment,
-                    &destOffsetSegment, &intfDestOffsets, nbIntf, nbIntfNodes,
+                    &destOffsetSegment, &intfDestIndex, nbIntf, nbIntfNodes,
                     nbBlocks, rank, operatorDim, &srcDataSegmentID, &destDataSegmentID,
                     &srcOffsetSegmentID, &destOffsetSegmentID, &queueID);
-        GASPI_offset_exchange (intfDestOffsets, intfIndex, neighborsList, nbIntf,
+        GASPI_offset_exchange (intfDestIndex, intfIndex, neighborsList, nbIntf,
                                nbBlocks, rank, destOffsetSegmentID, queueID);
         if (rank == 0) {
             timer.stop_time ();
@@ -280,8 +270,20 @@ int main (int argCount, char **argValue)
             cout << "Finalizing the D&C tree...           ";
             timer.start_time ();
         }
+        int *nbDCcomm = nullptr;
+        #ifdef MULTITHREADED_COMM
+            nbDCcomm = new int [nbIntf] ();
+        #endif
         DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                          intfDestOffsets, DIM_ELEM, nbBlocks, nbIntf, nbIntfNodes, rank);
+                          intfDestIndex, nbDCcomm, nbElem, DIM_ELEM, nbBlocks,
+                          nbIntf, rank);
+        #ifdef MULTITHREADED_COMM
+            GASPI_nb_notifications_exchange (neighborsList, nbDCcomm, &nbNotifications,
+                                             nbIntf, nbBlocks, rank,
+                                             destOffsetSegmentID, queueID);
+            delete[] nbDCcomm;
+            delete[] intfIndex, intfIndex = nullptr;
+        #endif
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -313,24 +315,6 @@ int main (int argCount, char **argValue)
         }
     #endif
 
-    // Compute the boundary conditions
-    if (rank == 0) {
-        cout << "Computing boundary conditions...     ";
-        timer.start_time ();
-    }
-    int dimNode = DIM_NODE;
-    boundNodesList = new int [nbBoundNodes];
-    checkBounds    = new int [nbNodes * DIM_NODE];
-    dqmrd4_ (&nbNodes, boundNodesCode, &nbBoundNodes, boundNodesList, &error);
-    e_essbcm_ (&dimNode, &nbNodes, &nbBoundNodes, boundNodesList,
-    		   boundNodesCode, checkBounds);
-    delete[] boundNodesList, delete[] boundNodesCode;
-    if (rank == 0) {
-        timer.stop_time ();
-    	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
-        timer.reset_time ();
-    }
-
     // Main loop with assembly, solver & update
     if (rank == 0) cout << "\nMain FEM loop\n";
     nodeToNodeValue = new double [nbEdges * operatorDim];
@@ -341,13 +325,16 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
               operatorDim, operatorID);
     #elif GASPI
-              operatorDim, operatorID, srcDataSegment, destDataSegment,
-              srcOffsetSegment, destOffsetSegment, intfDestOffsets, srcDataSegmentID,
-              destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID);
+              operatorDim, operatorID, nbNotifications, srcDataSegment,
+              destDataSegment, srcOffsetSegment, destOffsetSegment, intfDestIndex,
+              srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
+              destOffsetSegmentID, queueID);
     #endif
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
-    delete[] neighborsList, delete[] intfNodes, delete[] intfIndex;
-    delete[] coord, delete[] elemToNode;
+    delete[] neighborsList, delete[] coord, delete[] elemToNode, delete[] intfNodes;
+    #ifdef BULK_SYNCHRONOUS
+        delete[] intfIndex;
+    #endif
     #ifdef OPTIMIZED
         delete[] elemToEdge; 
     #endif
@@ -360,7 +347,7 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (intfDestOffsets, nbBlocks, rank, srcDataSegmentID,
+        GASPI_finalize (intfDestIndex, nbBlocks, rank, srcDataSegmentID,
                         destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID,
                         queueID);
     #endif

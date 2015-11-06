@@ -22,15 +22,21 @@
 #include <GASPI.h>
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *intfDestOffsets, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
                      gaspi_segment_id_t srcDataSegmentID,
                      gaspi_segment_id_t destDataSegmentID,
                      gaspi_segment_id_t srcOffsetSegmentID,
                      gaspi_segment_id_t destOffsetSegmentID,
                      gaspi_queue_id_t queueID);
 
+// Get the number of notifications coming from adjacent domains
+void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
+                                      int *nbNotifications, int nbIntf, int nbBlocks,
+                                      int rank, gaspi_segment_id_t destOffsetSegmentID,
+                                      gaspi_queue_id_t queueID);
+
 // Get the adjacent domains destination offset
-void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighborsList,
+void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsList,
                             int nbIntf, int nbBlocks, int rank,
                             gaspi_segment_id_t destOffsetSegmentID,
                             gaspi_queue_id_t queueID);
@@ -38,7 +44,7 @@ void GASPI_offset_exchange (int *intfDestOffsets, int *intfIndex, int *neighbors
 // Initialization of the GASPI segments & creation of the segment pointers
 void GASPI_init (double **srcDataSegment, double **destDataSegment,
                  int **srcOffsetSegment, int **destOffsetSegment,
-                 int **intfDestOffsets, int nbIntf, int nbIntfNodes, int nbBlocks,
+                 int **intfDestIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
                  int rank, int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
                  gaspi_segment_id_t *destDataSegmentID,
                  gaspi_segment_id_t *srcOffsetSegmentID,
