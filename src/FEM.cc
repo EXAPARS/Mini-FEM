@@ -166,7 +166,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         assembly (coord, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn, elemToNode,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
-                  , prec, srcDataSegment, srcOffsetSegment, neighborsList,
+                  , prec, srcDataSegment, srcOffsetSegment, neighborsList, intfIndex,
                   intfDestIndex, nbBlocks, nbIntf, rank, iter, srcDataSegmentID,
                   destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID
         #endif
@@ -190,7 +190,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             // Wait for multithreaded GASPI notifications
             GASPI_multithreaded_wait (prec, destDataSegment, intfNodes,
                                       destOffsetSegment, nbNotifications, nbBlocks,
-                                      operatorDim, iter, destOffsetSegmentID, rank, nbIntfNodes);
+                                      operatorDim, iter, destOffsetSegmentID, rank);
         #else
             // Halo exchange
             #ifdef XMPI

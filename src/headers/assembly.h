@@ -63,8 +63,9 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int nbEdges, int operatorDim, int operatorID
 #ifdef MULTITHREADED_COMM
                , double *prec, double *srcDataSegment, int *srcOffsetSegment,
-               int *neighborsList, int *intfDestOffsets, int nbBlocks, int nbIntf,
-               int rank, int iter, const gaspi_segment_id_t srcDataSegmentID,
+               int *neighborsList, int *intfIndex, int *intfDestIndex, int nbBlocks,
+               int nbIntf, int rank, int iter,
+               const gaspi_segment_id_t srcDataSegmentID,
                const gaspi_segment_id_t destDataSegmentID,
                const gaspi_segment_id_t srcOffsetSegmentID,
                const gaspi_segment_id_t destOffsetSegmentID,

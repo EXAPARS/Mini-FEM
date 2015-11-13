@@ -85,10 +85,6 @@ void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsLi
         // The +1 is required since a notification value cannot be equal to 0...
         SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, neighborsList[i]-1, rank,
                                       intfIndex[i]+1, queueID, GASPI_BLOCK));
-
-if (rank == 2)
-fprintf (stderr, "%d: mon intf %d avec le rang %d: [%d;%d]\n", rank, i,
-         neighborsList[i]-1, intfIndex[i], intfIndex[i+1]-1);
     }
 
     // For each interface, receive the destination offset from adjacent domain
@@ -99,9 +95,6 @@ fprintf (stderr, "%d: mon intf %d avec le rang %d: [%d;%d]\n", rank, i,
                                                1, &notifyID, GASPI_BLOCK));
         SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, notifyID,
                                             &notifyValue));
-
-if (notifyID == 2)
-fprintf (stderr, "%d: le rang %d m'a envoyé %d\n", rank, notifyID, notifyValue-1);
 
         // Remove the +1 of the local offset
         intfDestIndex[i] = notifyValue - 1;

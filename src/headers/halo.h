@@ -27,7 +27,7 @@
     // function
     typedef struct userCommArgs_s {
         double *prec, *srcDataSegment;
-        int *srcOffsetSegment, *neighborsList, *intfDestIndex;
+        int *srcOffsetSegment, *neighborsList, *intfIndex, *intfDestIndex;
         int nbBlocks, nbIntf, operatorDim, rank, iter;
         const gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
                                  srcOffsetSegmentID, destOffsetSegmentID;
@@ -60,7 +60,7 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
 void GASPI_multithreaded_wait (double *prec, double *destDataSegment, int *intfNodes,
                                int *destOffsetSegment, int nbNotifications,
                                int nbBlocks, int operatorDim, int iter,
-                               gaspi_segment_id_t destOffsetSegmentID, int rank, int nbIntfNodes);
+                               gaspi_segment_id_t destOffsetSegmentID, int rank);
 
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs);
