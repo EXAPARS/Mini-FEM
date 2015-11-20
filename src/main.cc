@@ -115,7 +115,8 @@ int main (int argCount, char **argValue)
         *dispList = nullptr, *neighborsList = nullptr, *boundNodesCode = nullptr,
         *boundNodesList = nullptr, *checkBounds = nullptr, *elemToEdge = nullptr;
     int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbNotifications = 0;
+        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbMaxComm,
+        nbNotifications = 0;
 
     // Arguments initialization
     check_args (argCount, argValue, &nbIter, rank);
@@ -289,6 +290,7 @@ int main (int argCount, char **argValue)
             GASPI_nb_notifications_exchange (neighborsList, nbDCcomm, &nbNotifications,
                                              nbIntf, nbBlocks, rank,
                                              destOffsetSegmentID, queueID);
+            GASPI_max_nb_communications (nbDCcomm, &nbMaxComm, nbIntf, nbBlocks, rank);
             delete[] nbDCcomm;
         #endif
         if (rank == 0) {
@@ -350,7 +352,7 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
               operatorDim, operatorID);
     #elif GASPI
-              operatorDim, operatorID, nbNotifications, srcDataSegment,
+              operatorDim, operatorID, nbMaxComm, nbNotifications, srcDataSegment,
               destDataSegment, srcOffsetSegment, destOffsetSegment, intfDestIndex,
               srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
               destOffsetSegmentID, queueID);

@@ -40,6 +40,24 @@ void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
     SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
 }
 
+// Get the max number of communications
+void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
+                                  int nbBlocks, int rank)
+{
+    // If there is only one domain, do nothing
+    if (nbBlocks < 2) return;
+
+    // Get the max number of communications of local process
+    int localMax = 0;
+    for (int i = 0; i < nbIntf; i++) {
+        if (nbDCcomm[i] > localMax) localMax = nbDCcomm[i];
+    }
+
+    // Get the max number of communications for all process
+    SUCCESS_OR_DIE (gaspi_allreduce (&localMax, globalMax, 1, GASPI_OP_MAX,
+                                     GASPI_TYPE_INT, GASPI_GROUP_ALL, GASPI_BLOCK));
+}
+
 // Get the number of notifications coming from adjacent domains
 void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
                                       int *nbNotifications, int nbIntf, int nbBlocks,
@@ -69,6 +87,9 @@ void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
         // Remove the +1 of the local offset
         (*nbNotifications) += (notifyValue - 1);
     }
+
+    // Ensure that number of notifications are received by all
+    SUCCESS_OR_DIE (gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK));
 }
 
 // Get the adjacent domains destination offset
@@ -99,6 +120,9 @@ void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsLi
         // Remove the +1 of the local offset
         intfDestIndex[i] = notifyValue - 1;
     }
+
+    // Ensure that offsets are received by all
+    SUCCESS_OR_DIE (gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK));
 }
 
 // Initialization of the GASPI segments & creation of the segment pointers

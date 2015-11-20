@@ -28,7 +28,7 @@
     typedef struct userCommArgs_s {
         double *prec, *srcDataSegment;
         int *srcOffsetSegment, *neighborsList, *intfIndex, *intfDestIndex;
-        int nbBlocks, nbIntf, operatorDim, rank, iter;
+        int nbBlocks, nbIntf, nbMaxComm, operatorDim, rank, iter;
         const gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
                                  srcOffsetSegmentID, destOffsetSegmentID;
         const gaspi_queue_id_t queueID;
@@ -49,8 +49,8 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
                           double *destDataSegment, int *intfIndex, int *intfNodes,
                           int *neighborsList, int *intfDestIndex, int nbBlocks,
                           int nbIntf, int operatorDim, int rank, int iter,
-                          const gaspi_segment_id_t segment1,
-                          const gaspi_segment_id_t segment2,
+                          const gaspi_segment_id_t srcDataSegmentID,
+                          const gaspi_segment_id_t destDataSegmentID,
                           const gaspi_queue_id_t queueID);
 
 #endif

@@ -29,6 +29,10 @@ void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
                      gaspi_segment_id_t destOffsetSegmentID,
                      gaspi_queue_id_t queueID);
 
+// Get the max number of communications
+void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
+                                  int nbBlocks, int rank);
+
 // Get the number of notifications coming from adjacent domains
 void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
                                       int *nbNotifications, int nbIntf, int nbBlocks,

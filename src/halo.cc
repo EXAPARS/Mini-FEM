@@ -120,23 +120,12 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
                           double *destDataSegment, int *intfIndex, int *intfNodes,
                           int *neighborsList, int *intfDestIndex, int nbBlocks,
                           int nbIntf, int operatorDim, int rank, int iter,
-                          const gaspi_segment_id_t segment1,
-                          const gaspi_segment_id_t segment2,
+                          const gaspi_segment_id_t srcDataSegmentID,
+                          const gaspi_segment_id_t destDataSegmentID,
                           const gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
-
-    // Double buffering flip/flop
-    gaspi_segment_id_t srcDataSegmentID, destDataSegmentID;
-    if ((segment1 % 2) == 0) {
-        srcDataSegmentID  = segment1;
-        destDataSegmentID = segment2;
-    }
-    else {
-        srcDataSegmentID  = segment2;
-        destDataSegmentID = segment1;
-    }
 
     // For each interface
     #ifdef REF
@@ -155,7 +144,7 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
             localOffset = begin            * operatorDim * sizeof (double),
             destOffset  = intfDestIndex[i] * operatorDim * sizeof (double),
             neighbor    = neighborsList[i] - 1;
-        gaspi_notification_id_t notifyID = iter * nbBlocks + rank;
+        gaspi_notification_id_t notifyID = rank;
 
         // Initialize source segment
         #ifdef REF
@@ -197,8 +186,8 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
         // Wait & reset the first incoming notification
         while (1) {
             gaspi_notification_id_t notifyID;
-            SUCCESS_OR_DIE (gaspi_notify_waitsome (destDataSegmentID, iter*nbBlocks,
-                                                   nbBlocks, &notifyID, GASPI_BLOCK));
+            SUCCESS_OR_DIE (gaspi_notify_waitsome (destDataSegmentID, 0, nbBlocks,
+                                                   &notifyID, GASPI_BLOCK));
             SUCCESS_OR_DIE (gaspi_notify_reset (destDataSegmentID, notifyID,
                                                 &notifyValue));
             if (notifyValue) break;
@@ -264,7 +253,9 @@ void GASPI_multithreaded_wait (double *prec, double *destDataSegment, int *intfN
         }
 
         // Assemble local and incoming data
-        for (int j = notifyID; j < notifyValue; j++) {
+        int begin = (uint16_t)notifyValue,
+            end   = begin + (notifyValue >> 16);
+        for (int j = begin; j < end; j++) {
             int dest = intfNodes[destOffsetSegment[j]] - 1;
             for (int k = 0; k < operatorDim; k++) {
                 prec[dest*operatorDim+k] += destDataSegment[j*operatorDim+k];
@@ -286,9 +277,10 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
          *intfDestIndex    = tmpCommArgs->intfDestIndex;
     int nbBlocks           = tmpCommArgs->nbBlocks,
         nbIntf             = tmpCommArgs->nbIntf,
+        nbMaxComm          = tmpCommArgs->nbMaxComm,
         operatorDim        = tmpCommArgs->operatorDim,
-        rank               = tmpCommArgs->rank,
-        iter               = tmpCommArgs->iter;
+        rank               = tmpCommArgs->rank;
+//        iter               = tmpCommArgs->iter;
     const gaspi_segment_id_t srcDataSegmentID    = tmpCommArgs->srcDataSegmentID,
                              destDataSegmentID   = tmpCommArgs->destDataSegmentID,
                              srcOffsetSegmentID  = tmpCommArgs->srcOffsetSegmentID,
@@ -299,7 +291,8 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
     int *intfDCindex  = DCcommArgs->intfIndex,
         *intfDCnodes  = DCcommArgs->intfNodes,
         *intfDCdest   = DCcommArgs->intfDest,
-        *intfDCoffset = DCcommArgs->intfOffset;
+        *intfDCoffset = DCcommArgs->intfOffset,
+        *commID       = DCcommArgs->commID;
 
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -311,7 +304,7 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         int begin = intfDCindex[i],
             end   = intfDCindex[i+1],
             size  = end - begin;
-        if (size == 0) continue;
+        if (size <= 0) continue;
 
         int srcOffset               = intfIndex[i]     + intfDCoffset[i],
             destOffset              = intfDestIndex[i] + intfDCoffset[i],
@@ -322,8 +315,10 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
             destOffsetSegmentOffset = destOffset               * sizeof (int),
             offsetSegmentSize       = size                     * sizeof (int),
             neighbor                = neighborsList[i] - 1;
-        gaspi_notification_id_t notifyID = destOffset;
-        gaspi_notification_t notifyValue = destOffset + size;
+        //gaspi_notification_id_t notifyID = iter * nbBlocks * nbMaxComm +
+        //                                   rank * nbMaxComm + commID[i];
+        gaspi_notification_id_t notifyID = rank * nbMaxComm + commID[i];
+        gaspi_notification_t notifyValue = size << 16 | destOffset;
 
         // Initialize source segment
         for (int j = 0; j < size; j++) {

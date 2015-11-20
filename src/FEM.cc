@@ -18,6 +18,7 @@
     #include <mpi.h>
 #endif
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <string.h>
 #include <cmath>
@@ -37,8 +38,6 @@
 #include "preconditioner.h"
 #include "assembly.h"
 #include "FEM.h"
-
-#include <unistd.h>
 
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size)
@@ -60,25 +59,37 @@ void check_results (double *prec, double *nodeToNodeValue, int nbEdges, int nbNo
     MatrixNorm = compute_double_norm (nodeToNodeValue, nbEdges*operatorDim);
     precNorm   = compute_double_norm (prec, nbNodes*operatorDim);
 
-    if (rank == 1) sleep (1);
-    if (rank == 2) sleep (2);
-    if (rank == 3) sleep (3);
+    // Store results in a file
+    string fileName = "numerical_results_" + to_string ((long long)rank);
+    ofstream resultFile (fileName, ios::out | ios::trunc);
+    resultFile << "Numerical stability of rank " << rank << endl
+               << "----------------------------------------------" << endl
+               << "  Matrix -> reference norm : " << refMatrixNorm << endl
+               << "              current norm : " << MatrixNorm << endl
+               << "                difference : " << abs (refMatrixNorm - MatrixNorm) /
+                                                          refMatrixNorm << endl << endl
+               << "    Prec -> reference norm : " << refPrecNorm << endl
+               << "              current norm : " << precNorm << endl
+               << "                difference : " << abs (refPrecNorm - precNorm) /
+                                                          refPrecNorm << endl
+               << "----------------------------------------------" << endl;
+    resultFile.close ();
 
-//    if (rank == 0) {
-        cout << "Numerical stability of rank " << rank << endl << setprecision (3);
-        cout << "----------------------------------------------" << endl;
-        cout << "  Matrix -> reference norm : " << refMatrixNorm << endl
+    // Display results of rank 0
+    if (rank == 0) {
+        cout << "Numerical stability of rank 0" << endl
+             << "----------------------------------------------" << endl
+             << "  Matrix -> reference norm : " << refMatrixNorm << endl
              << "              current norm : " << MatrixNorm << endl
              << "                difference : " << abs (refMatrixNorm - MatrixNorm) /
-                                                        refMatrixNorm
-             << endl << endl;
-        cout << "    Prec -> reference norm : " << refPrecNorm << endl
+                                                        refMatrixNorm << endl << endl
+             << "    Prec -> reference norm : " << refPrecNorm << endl
              << "              current norm : " << precNorm << endl
              << "                difference : " << abs (refPrecNorm - precNorm) /
-                                                        refPrecNorm
-             << endl;
-        cout << "----------------------------------------------" << endl;
-//    }
+                                                        refPrecNorm << endl
+             << "----------------------------------------------" << endl
+             << "(see numerical_results files for all ranks)" << endl << endl;
+    }
 }
 
 // Get the average measures from all ranks and keep the max
@@ -92,7 +103,7 @@ void get_average_cycles (DC_timer &ASMtimer, DC_timer &precInitTimer,
     localCycles[2] = haloTimer.get_avg_cycles ();
     localCycles[3] = precInverTimer.get_avg_cycles ();
 
-    if (nbBlocks > 2) {
+    if (nbBlocks > 1) {
         #ifdef XMPI
             MPI_Reduce (localCycles, globalCycles, 4, MPI_UINT64_T, MPI_MAX, 0,
                         MPI_COMM_WORLD);
@@ -128,9 +139,10 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
 #ifdef XMPI
                int operatorID)
 #elif GASPI
-               int operatorID, int nbNotifications, double *srcDataSegment,
-               double *destDataSegment, int *srcOffsetSegment, int *destOffsetSegment,
-               int *intfDestIndex, gaspi_segment_id_t srcDataSegmentID,
+               int operatorID, int nbMaxComm, int nbNotifications,
+               double *srcDataSegment, double *destDataSegment, int *srcOffsetSegment,
+               int *destOffsetSegment, int *intfDestIndex,
+               gaspi_segment_id_t srcDataSegmentID,
                gaspi_segment_id_t destDataSegmentID,
                gaspi_segment_id_t srcOffsetSegmentID,
                gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID)
@@ -167,8 +179,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
                   , prec, srcDataSegment, srcOffsetSegment, neighborsList, intfIndex,
-                  intfDestIndex, nbBlocks, nbIntf, rank, iter, srcDataSegmentID,
-                  destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID, queueID
+                  intfDestIndex, nbBlocks, nbIntf, nbMaxComm, rank, iter,
+                  srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
+                  destOffsetSegmentID, queueID
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
@@ -184,6 +197,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             if (rank == 0) cout << "done\n";
         #endif
 
+        // Halo exchange
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
         #ifdef MULTITHREADED_COMM
@@ -192,7 +206,6 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                                       destOffsetSegment, nbNotifications, nbBlocks,
                                       operatorDim, iter, destOffsetSegmentID, rank);
         #else
-            // Halo exchange
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborsList, nbBlocks,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
@@ -213,6 +226,18 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                         operatorID);
         if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
+
+        // Double buffering flip/flop
+        #ifdef GASPI
+            gaspi_segment_id_t tmpSegmentID;
+            tmpSegmentID        = srcDataSegmentID;
+            srcDataSegmentID    = destDataSegmentID;
+            destDataSegmentID   = tmpSegmentID;
+            tmpSegmentID        = srcOffsetSegmentID;
+            srcOffsetSegmentID  = destOffsetSegmentID;
+            destOffsetSegmentID = tmpSegmentID;
+            SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
+        #endif
     }
 
     // Print the average measures
