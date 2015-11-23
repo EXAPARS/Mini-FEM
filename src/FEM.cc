@@ -34,6 +34,7 @@
 
 #include "globals.h"
 #include "IO.h"
+#include "GASPI_handler.h"
 #include "halo.h"
 #include "preconditioner.h"
 #include "assembly.h"
@@ -236,7 +237,7 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             tmpSegmentID        = srcOffsetSegmentID;
             srcOffsetSegmentID  = destOffsetSegmentID;
             destOffsetSegmentID = tmpSegmentID;
-            SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
+            GASPI_wait_for_queue_half_full (queueID);
         #endif
     }
 

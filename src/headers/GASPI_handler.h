@@ -29,6 +29,9 @@ void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
                      gaspi_segment_id_t destOffsetSegmentID,
                      gaspi_queue_id_t queueID);
 
+// Waits until given queue is empty if it's at least half full
+void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID);
+
 // Get the max number of communications
 void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
                                   int nbBlocks, int rank);

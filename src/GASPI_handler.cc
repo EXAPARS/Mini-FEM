@@ -40,6 +40,20 @@ void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
     SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
 }
 
+// Waits until given queue is empty if it's at least half full
+void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID)
+{
+    gaspi_number_t queueSizeMax;
+    gaspi_number_t queueSize;
+
+    SUCCESS_OR_DIE (gaspi_queue_size_max (&queueSizeMax));
+    SUCCESS_OR_DIE (gaspi_queue_size (queueID, &queueSize));
+
+    if (queueSize >= queueSizeMax/2) {
+        SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
+    }
+}
+
 // Get the max number of communications
 void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
                                   int nbBlocks, int rank)
