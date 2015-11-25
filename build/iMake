@@ -157,9 +157,6 @@ if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
     echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
     exit
 fi
-if [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_vec" ]]; then
-    TREE=0
-fi
 
 # Configure D&C library
 DC_ARGUMENTS="$DISTRI $SHARED"

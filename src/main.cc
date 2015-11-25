@@ -160,7 +160,7 @@ int main (int argCount, char **argValue)
                 cout << "Creation of the D&C tree...          ";
                 timer.start_time ();
             }
-            DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes, rank);
+            DC_create_tree (elemToNode, nbElem, DIM_ELEM, nbNodes);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
