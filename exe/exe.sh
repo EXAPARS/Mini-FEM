@@ -5,5 +5,6 @@ export LD_LIBRARY_PATH=/opt/intel/impi/4.1.2.040/intel64/lib:/opt/intel/composer
 export CILK_NWORKERS=2
 export DISPLAY=localhost:10.0
 #./bin/miniFEM_DC_GASPI_CILK_BulkSynchronous_TreeCreation LM6 ela 15
-./bin/miniFEM_DC_GASPI_CILK_MultithreadedComm_TreeCreation LM6 lap 15
+#./bin/miniFEM_DC_GASPI_CILK_MultithreadedComm_TreeCreation EIB lap 15
+./bin/miniFEM_DC_GASPI_CILK_MultithreadedComm EIB lap 15
 #xterm -e gdb --ex run --args ./bin/miniFEM_DC_GASPI_CILK_MultithreadedComm_TreeCreation LM6 ela 1

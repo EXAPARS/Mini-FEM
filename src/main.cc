@@ -112,11 +112,11 @@ int main (int argCount, char **argValue)
     double *coord = nullptr, *nodeToNodeValue = nullptr, *prec = nullptr;
     int *nodeToNodeRow = nullptr, *nodeToNodeColumn = nullptr, *elemToNode = nullptr,
         *intfIndex = nullptr, *intfNodes = nullptr, *intfDestIndex = nullptr,
-        *dispList = nullptr, *neighborsList = nullptr, *boundNodesCode = nullptr,
-        *boundNodesList = nullptr, *checkBounds = nullptr, *elemToEdge = nullptr;
+        *neighborsList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
+        *checkBounds = nullptr, *elemToEdge = nullptr;
     int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbMaxComm,
-        nbNotifications = 0;
+        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbNotifications = 0,
+        nbMaxComm = 0;
 
     // Arguments initialization
     check_args (argCount, argValue, &nbIter, rank);
@@ -137,9 +137,8 @@ int main (int argCount, char **argValue)
         timer.start_time ();
     }
     read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
-                     &dispList, &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
+                     &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
                      &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
-    delete[] dispList;
     if (rank == 0) {
         timer.stop_time ();
         cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -174,7 +173,8 @@ int main (int argCount, char **argValue)
                 cout << "Reading the D&C tree...              ";
                 timer.start_time ();
             }
-            DC_read_tree (treePath, nbElem, nbNodes, nbIntf);
+            DC_read_tree (treePath, nbElem, nbNodes, nbIntf, &nbNotifications,
+                          &nbMaxComm);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -300,7 +300,7 @@ int main (int argCount, char **argValue)
             cout << "Storing the D&C tree...              ";
             timer.start_time ();
         }
-        DC_store_tree (treePath, nbElem, nbNodes, nbIntf);
+        DC_store_tree (treePath, nbElem, nbNodes, nbIntf, nbNotifications, nbMaxComm);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";

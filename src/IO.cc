@@ -60,10 +60,10 @@ void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
 
 // Read input data from DefMesh
 void read_input_data (double **coord, int **elemToNode, int **neighborsList,
-                      int **intfIndex, int **intfNodes, int **dispList,
-                      int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
-                      int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
-                      int *nbBoundNodes, int nbBlocks, int rank)
+                      int **intfIndex, int **intfNodes, int **boundNodesCode,
+                      int *nbElem, int *nbNodes, int *nbEdges, int *nbIntf,
+                      int *nbIntfNodes, int *nbDispNodes, int *nbBoundNodes,
+                      int nbBlocks, int rank)
 {
 	string fileName = (string)DATA_PATH + "/" + meshName + "/inputs/" + operatorName
                       + "_" + to_string ((long long)nbBlocks) + "_"
@@ -87,17 +87,19 @@ void read_input_data (double **coord, int **elemToNode, int **neighborsList,
 	*neighborsList  = new int    [max (*nbIntf,1) * 3];
 	*intfIndex      = new int    [(*nbIntf) + 1];
 	*intfNodes      = new int    [*nbIntfNodes];
-	*dispList       = new int    [*nbDispNodes];
 	*boundNodesCode = new int    [*nbNodes];
+	int *dispList   = new int    [*nbDispNodes];
 
 	inputFile.read ((char*)*coord,        (*nbNodes) * DIM_NODE * sizeof (double));
 	inputFile.read ((char*)*elemToNode,    (*nbElem) * DIM_ELEM * sizeof (int));
 	inputFile.read ((char*)*neighborsList, (max(*nbIntf,1) * 3) * sizeof (int));
 	inputFile.read ((char*)*intfIndex,        ((*nbIntf) + 1)   * sizeof (int));
 	inputFile.read ((char*)*intfNodes,         (*nbIntfNodes)   * sizeof (int));
-	inputFile.read ((char*)*dispList,          (*nbDispNodes)   * sizeof (int));
+	inputFile.read ((char*)dispList,           (*nbDispNodes)   * sizeof (int));
 	inputFile.read ((char*)*boundNodesCode,    (*nbNodes)       * sizeof (int));
 	inputFile.close ();
+
+    delete[] dispList;
 }
 
 // Store necessary data from DefMesh

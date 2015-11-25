@@ -29,10 +29,10 @@ void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
 
 // Read input data from DefMesh
 void read_input_data (double **coord, int **elemToNode, int **neighborsList,
-                      int **intfIndex, int **intfNodes, int **dispList,
-                      int **boundNodesCode, int *nbElem, int *nbNodes, int *nbEdges,
-                      int *nbIntf, int *nbIntfNodes, int *nbDispNodes,
-                      int *nbBoundNodes, int nbBlocks, int rank);
+                      int **intfIndex, int **intfNodes, int **boundNodesCode,
+                      int *nbElem, int *nbNodes, int *nbEdges, int *nbIntf,
+                      int *nbIntfNodes, int *nbDispNodes, int *nbBoundNodes,
+                      int nbBlocks, int rank);
 
 // Store necessary data from DefMesh
 extern "C"
