@@ -17,7 +17,7 @@
 #  Mini-FEM. If not, see <http://www.gnu.org/licenses/>.
 
 # Libraries path
-DATA_PATH="$HOME/Dassault/DC_Data"
+DATA_PATH="$HOME/lthebaul/DC_Data"
 DC_PATH="$HOME/Dassault/DC-lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
