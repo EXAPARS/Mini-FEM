@@ -2,8 +2,8 @@
 
 # Set the parameters
 EXE_DIR=$HOME/Dassault/Mini-FEM/exe
-EXE_FILE=$EXE_DIR/GASPI_exe_$NB_NODES.sh
-MACHINE_FILE=$EXE_DIR/GASPI_machine_file_$NB_NODES
+EXE_FILE=$EXE_DIR/GASPI_exe_$NB_NODES\_$NB_PROCESS_PER_NODE.sh
+MACHINE_FILE=$EXE_DIR/GASPI_machine_file_$NB_NODES\_$NB_PROCESS_PER_NODE
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
 NB_ITERATIONS=50
@@ -11,11 +11,16 @@ NB_ITERATIONS=50
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
-for VERSION in 'REF_BulkSynchronous' 'DC_BulkSynchronous_TreeCreation' \
-                                     'DC_MultithreadedComm_TreeCreation'
+for VERSION in 'REF_BulkSynchronous' 'DC_BulkSynchronous_TreeCreation' 'DC_MultithreadedComm_TreeCreation'
 do
-    for DISTRI in 'XMPI' 'GASPI'
+    for DISTRI in 'GASPI' 'XMPI'
     do
+        # Multithreaded comm version unavailable in MPI
+        if [ $VERSION == 'DC_MultithreadedComm_TreeCreation' ] &&
+           [ $DISTRI  == 'XMPI' ]; then
+            break
+        fi
+
         # Set the environment
         module load CMake/3.0.0-intel-2015b
         if [ $DISTRI == "GASPI" ]; then
@@ -24,61 +29,57 @@ do
 
         for SHARED in 'CILK' #'OMP'
         do
+            # Set the binary name
             BINARY=$EXE_DIR/bin/miniFEM_$VERSION\_$DISTRI\_$SHARED
             if [ $VERSION == "DC_VEC" ]; then
                 BINARY=$BINARY\_$VECTOR_LENGTH
             fi
 
-            for OPERATOR in 'ela' #'lap'
+            for OPERATOR in 'ela'
             do
-                # Create the GASPI execution script
+                # Create the GASPI execution script and machine file
                 if [ $DISTRI == "GASPI" ]; then
                     echo "#!/bin/sh" > $EXE_FILE
                     echo "cd $EXE_DIR" >> $EXE_FILE
                     echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $EXE_FILE
                     echo "$BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS" >> $EXE_FILE
                     chmod +x $EXE_FILE
+                    cat $PBS_NODEFILE | cut -d'.' -f1 > $MACHINE_FILE
                 fi
 
-                for PART_SIZE in 200 #50 200 500
+                for PART_SIZE in 200
                 do
                     export elemPerPart=$PART_SIZE
 
-                    #for NB_PROCESS in 1 4 8 16 #32 64 128 256 512
-                    for NB_PROCESS in $NB_NODES
+                    for NB_THREADS_PER_PROCESS in 1 4 8 16 24
                     do
+                        # Set the number of processes and threads
+                        let "NB_TOTAL_PROCESS=$NB_PROCESS_PER_NODE*$NB_NODES"
+                        let "NB_THREADS_PER_NODE=$NB_PROCESS_PER_NODE*\
+                                                 $NB_THREADS_PER_PROCESS"
+                        if [ "$NB_THREADS_PER_NODE" -gt "$NB_CORES_PER_NODE" ]; then
+                            break
+                        fi
+                        if [ $VERSION == 'REF_BulkSynchronous' ] &&
+                           [ $NB_THREADS_PER_PROCESS -gt 1 ]; then
+                            break
+                        fi
+                        if [ $SHARED == "CILK" ]; then
+                            export CILK_NWORKERS=$NB_THREADS
+                        else
+                            export OMP_NUM_THREADS=$NB_THREADS
+                        fi
 
-                        for NB_THREADS in 1 4 8 12 16 24
-                        do
-                            #let "nbCores=$NB_PROCESS*$NB_THREADS"
-                            let "nbCores=$NB_NODES*$NB_THREADS"
-                            if [ "$nbCores" -gt "$MAX_CORES" ]; then break; fi
-                            #if [ $VERSION == 'REF' ] && [ $NB_THREADS -gt 1 ]; then break; fi
-                            if [ $VERSION == 'REF_BulkSynchronous' ]; then
-                                NB_PROCESS=$nbCores
-                                NB_THREADS=1
-                            fi
-                            if [ $SHARED == "CILK" ]; then
-                                export CILK_NWORKERS=$NB_THREADS
-                            else
-                                export OMP_NUM_THREADS=$NB_THREADS
-                            fi
+                        # Create the output file
+                        OUTPUT_FILE=$EXE_DIR/stdout_$TEST_CASE\_$VERSION\_$OPERATOR\_$PART_SIZE\_$DISTRI\_$SHARED\_$NB_NODES\_$NB_PROCESS_PER_NODE\_$NB_THREADS_PER_PROCESS
 
-                            # Create the GASPI machine file
-                            if [ $DISTRI == "GASPI" ]; then
-                                cat $PBS_NODEFILE | head -n $NB_PROCESS | cut -d'.' -f1 > $MACHINE_FILE
-                            fi
-
-                            OUTPUT_FILE=$EXE_DIR/stdout_$TEST_CASE\_$NB_NODES\_$VERSION\_$DISTRI\_$SHARED\_$OPERATOR\_$PART_SIZE\_$NB_PROCESS\_$NB_THREADS
-
-                            if [ $DISTRI == "XMPI" ]; then
-       	                        mpirun -np $NB_PROCESS $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS > $OUTPUT_FILE
-                            elif [ $DISTRI == "GASPI" ]; then
-                                gaspi_run -m $MACHINE_FILE $EXE_FILE > $OUTPUT_FILE
-                            fi
-
-#                            mv intfRatio intfRatio_$TEST_CASE\_$NB_PROCESS\_$PART_SIZE
-                        done
+                        # Launch the job
+                        if [ $DISTRI == "XMPI" ]; then
+                            mpirun -np $NB_TOTAL_PROCESS $BINARY $TEST_CASE \
+                                       $OPERATOR $NB_ITERATIONS > $OUTPUT_FILE
+                        elif [ $DISTRI == "GASPI" ]; then
+                            gaspi_run -m $MACHINE_FILE $EXE_FILE > $OUTPUT_FILE
+                        fi
                     done
                 done
             done
@@ -86,6 +87,6 @@ do
     done
 done
 
-#rm $MACHINE_FILE $EXE_FILE
+rm $MACHINE_FILE $EXE_FILE
 
 exit
