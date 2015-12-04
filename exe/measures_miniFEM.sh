@@ -64,9 +64,9 @@ do
                             break
                         fi
                         if [ $SHARED == "CILK" ]; then
-                            export CILK_NWORKERS=$NB_THREADS
+                            export CILK_NWORKERS=$NB_THREADS_PER_PROCESS
                         else
-                            export OMP_NUM_THREADS=$NB_THREADS
+                            export OMP_NUM_THREADS=$NB_THREADS_PER_PROCESS
                         fi
 
                         # Create the output file
