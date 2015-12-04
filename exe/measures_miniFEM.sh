@@ -8,6 +8,14 @@ TEST_CASE=EIB
 VECTOR_LENGTH=AVX
 NB_ITERATIONS=50
 
+# Set the Anselm environment
+#module load cmake/2.8.11 PrgEnv-intel/14.0.1 gpi2/1.1.1 impi/4.1.1.036
+#export PATH=$PATH:/apps/libs/gpi2/1.1.1/bin/
+
+# Set the Salomon environment
+module load CMake/3.0.0-intel-2015b
+export PATH=$PATH:$HOME/Programs/GPI-2/bin
+
 # Go to the appropriate directory, exit on failure
 cd $EXE_DIR || exit
 
@@ -21,21 +29,10 @@ do
             break
         fi
 
-        # Set the environment
-        module load cmake/2.8.11 PrgEnv-intel/14.0.1 gpi2/1.1.1 impi/4.1.1.036
-        #module load CMake/3.0.0-intel-2015b
-        if [ $DISTRI == "GASPI" ]; then
-            export PATH=$PATH:/apps/libs/gpi2/1.1.1/bin/
-            #export PATH=$PATH:$HOME/Programs/GPI-2/bin
-        fi
-
         for SHARED in 'CILK' #'OMP'
         do
             # Set the binary name
             BINARY=$EXE_DIR/bin/miniFEM_$VERSION\_$DISTRI\_$SHARED
-            if [ $VERSION == "DC_VEC" ]; then
-                BINARY=$BINARY\_$VECTOR_LENGTH
-            fi
 
             for OPERATOR in 'ela'
             do

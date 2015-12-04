@@ -8,10 +8,6 @@ qsub -A DD-15-6 -q qprod -l select=4:ncpus=16:mpiprocs=1:cpu_freq=24,walltime=01
      -l cpu_turbo_boost=0 -v NB_NODES=4,NB_PROCESS_PER_NODE=1,NB_CORES_PER_NODE=16 \
      ./measures_miniFEM.sh
 
-qsub -A DD-15-6 -q qprod -l select=4:ncpus=16:mpiprocs=16:cpu_freq=24,walltime=01:00:00\
-     -l cpu_turbo_boost=0 -v NB_NODES=4,NB_PROCESS_PER_NODE=16,NB_CORES_PER_NODE=16 \
-     ./measures_miniFEM.sh
-
 #qsub -A DD-15-6 -q qprod -l select=8:ncpus=16:mpiprocs=1:cpu_freq=24,walltime=00:30:00\
 #     -l cpu_turbo_boost=0 -v NB_NODES=8,NB_PROCESS_PER_NODE=16,NB_CORES_PER_NODE=16 \
 #     ./measures_miniFEM.sh
