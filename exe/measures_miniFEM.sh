@@ -22,9 +22,11 @@ do
         fi
 
         # Set the environment
-        module load CMake/3.0.0-intel-2015b
+        module load cmake/2.8.11 PrgEnv-intel/14.0.1 gpi2/1.1.1 impi/4.1.1.036
+        #module load CMake/3.0.0-intel-2015b
         if [ $DISTRI == "GASPI" ]; then
-            export PATH=$PATH:$HOME/Programs/GPI-2/bin
+            export PATH=$PATH:/apps/libs/gpi2/1.1.1/bin/
+            #export PATH=$PATH:$HOME/Programs/GPI-2/bin
         fi
 
         for SHARED in 'CILK' #'OMP'
