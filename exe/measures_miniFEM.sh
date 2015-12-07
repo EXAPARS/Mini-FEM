@@ -21,9 +21,9 @@ cd $EXE_DIR || exit
 
 for VERSION in 'REF_BulkSynchronous' 'DC_BulkSynchronous_TreeCreation' 'DC_MultithreadedComm_TreeCreation'
 do
-    for DISTRI in 'GASPI' 'XMPI'
+    for DISTRI in 'XMPI' 'GASPI'
     do
-        # Multithreaded comm version unavailable in MPI
+        # Multithreaded comm version unavailable for MPI
         if [ $VERSION == 'DC_MultithreadedComm_TreeCreation' ] &&
            [ $DISTRI  == 'XMPI' ]; then
             break
@@ -36,23 +36,13 @@ do
 
             for OPERATOR in 'ela'
             do
-                # Create the GASPI execution script and machine file
-                if [ $DISTRI == "GASPI" ]; then
-                    echo "#!/bin/sh" > $EXE_FILE
-                    echo "cd $EXE_DIR" >> $EXE_FILE
-                    echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $EXE_FILE
-                    echo "$BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS" >> $EXE_FILE
-                    chmod +x $EXE_FILE
-                    cat $PBS_NODEFILE | cut -d'.' -f1 > $MACHINE_FILE
-                fi
-
                 for PART_SIZE in 200
                 do
                     export elemPerPart=$PART_SIZE
 
                     for NB_THREADS_PER_PROCESS in 1 4 8 16 24
                     do
-                        # Set the number of processes and threads
+                        # Set the number of process and threads
                         let "NB_TOTAL_PROCESS=$NB_PROCESS_PER_NODE*$NB_NODES"
                         let "NB_THREADS_PER_NODE=$NB_PROCESS_PER_NODE*\
                                                  $NB_THREADS_PER_PROCESS"
@@ -67,6 +57,25 @@ do
                             export CILK_NWORKERS=$NB_THREADS_PER_PROCESS
                         else
                             export OMP_NUM_THREADS=$NB_THREADS_PER_PROCESS
+                        fi
+
+                        # Create the GASPI execution script and machine file
+                        if [ $DISTRI == "GASPI" ]; then
+                            echo "#!/bin/sh" > $EXE_FILE
+                            echo "cd $EXE_DIR" >> $EXE_FILE
+                            echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $EXE_FILE
+                            if [ $SHARED == "CILK" ]; then
+                                echo "export CILK_NWORKERS=$NB_THREADS_PER_PROCESS" \
+                                     >> $EXE_FILE
+                            else
+                                echo "export OMP_NUM_THREADS=$NB_THREADS_PER_PROCESS" \
+                                     >> $EXE_FILE
+                            fi
+                            echo "$BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS" \
+                                 >> $EXE_FILE
+                            #echo "./maqao lprof -- $BINARY $TEST_CASE $OPERATOR $NB_ITERATIONS" >> $EXE_FILE
+                            chmod +x $EXE_FILE
+                            cat $PBS_NODEFILE | cut -d'.' -f1 > $MACHINE_FILE
                         fi
 
                         # Create the output file
