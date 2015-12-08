@@ -26,7 +26,7 @@ do
         # Multithreaded comm version unavailable for MPI
         if [ $VERSION == 'DC_MultithreadedComm_TreeCreation' ] &&
            [ $DISTRI  == 'XMPI' ]; then
-            break
+            continue
         fi
 
         for SHARED in 'CILK' #'OMP'
