@@ -188,8 +188,8 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
         if (rank == 0) cout << "done\n";
 
+        // Preconditioner initialization
         #ifdef BULK_SYNCHRONOUS
-            // Preconditioner initialization
             if (rank == 0) cout << "   Preconditioner initialization...  ";
             if (nbIter == 1 || iter > 0) precInitTimer.start_cycles ();
             prec_init (prec, nodeToNodeValue, nodeToNodeRow, nodeToNodeColumn,
@@ -198,15 +198,16 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             if (rank == 0) cout << "done\n";
         #endif
 
-        // Halo exchange
+        // Distributed communications
         if (rank == 0) cout << "   Halo exchange...                  ";
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
         #ifdef MULTITHREADED_COMM
-            // Wait for multithreaded GASPI notifications
+            // Wait for multithreaded GASPI notifications sent during assembly step
             GASPI_multithreaded_wait (prec, destDataSegment, intfNodes,
                                       destOffsetSegment, nbNotifications, nbBlocks,
                                       operatorDim, iter, destOffsetSegmentID, rank);
         #else
+            // Halo exchange
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborsList, nbBlocks,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
