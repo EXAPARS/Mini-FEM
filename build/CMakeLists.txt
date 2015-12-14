@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License along with
 #  Mini-FEM. If not, see <http://www.gnu.org/licenses/>.
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 2.8.10)
 
 # Compilers
 set (EXECUTABLE_OUTPUT_PATH ../bin)
@@ -57,7 +57,9 @@ if (${DEBUG})
 endif (${DEBUG})
 if (${VERBOSE})
     set (CMAKE_VERBOSE_MAKEFILE 1)
-    set (flags "${flags} -qopt-report-phase=vec")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 15.0)
+	set (flags "${flags} -qopt-report-phase=vec")
+    endif()
 endif (${VERBOSE})
 if (${OPTIMIZED})
 	add_definitions (-DOPTIMIZED)
