@@ -25,7 +25,7 @@ A single command is required to compile a new binary:
     - "ref" to build a pure MPI version,
     - "coloring" to build an hybrid MPI+coloring version,
     - "DC" to build an hybrid MPI+D&C version,
-    - or "vec" to build an hybrid version using MPI, D&C, and coloring.
+    - or "dc-vec" to build an hybrid version using MPI, D&C, and coloring.
 
 The 2 last options requires to have the DC-lib.
 The path to the DC-lib can be set at the begining of the iMake file.
