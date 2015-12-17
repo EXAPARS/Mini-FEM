@@ -28,7 +28,7 @@ A single command is required to compile a new binary:
     - or "dc-vec" to build a hybrid version using MPI, D&C, and coloring.
 
 The 2 last options requires to have the DC-lib.
-The path to the DC-lib can be set at the begining of the iMake file.
+The path to the DC-lib can be set at the beginning of the iMake file.
 
 - The $VECTOR_LENGTH variable must be specified when using the D&C Vec version.
   It can be either SSE, AVX or MIC depending on the target architecture.
@@ -75,6 +75,6 @@ How to read the results
 The proto-application output is composed of:
  - A summary of the parameters of execution.
  - The execution time of each prerequisite steps.
- - The execution time, in RDTSC cycles, of the of the matrix assembly and the
+ - The execution time, in RDTSC cycles, of the matrix assembly and the
    preconditioner creation for each iteration.
  - A numerical checking.
