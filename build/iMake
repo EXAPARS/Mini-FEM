@@ -17,12 +17,13 @@
 #  Mini-FEM. If not, see <http://www.gnu.org/licenses/>.
 
 # Libraries path
-DATA_PATH="$HOME/Dassault/DC_Data"
+DATA_PATH="$HOME/lthebaul/DC_Data"
 DC_PATH="$HOME/Dassault/DC-lib"
 DC_BUILD="$DC_PATH/build"
 DC_INCLUDE="$DC_PATH/include"
 DC_LIBRARIES="$DC_PATH/lib/libDC"
-GASPI_PATH="$HOME/Programs/GPI-2"
+#GASPI_PATH="$HOME/Programs/GPI-2"
+GASPI_PATH="/apps/libs/gpi2/1.1.1/"
 GASPI_INCLUDE="$GASPI_PATH/include"
 GASPI_LIBRARIES="$GASPI_PATH/lib64/libGPI2.a"
 METIS_PATH="$HOME/Programs/METIS"
@@ -35,27 +36,28 @@ shopt -s nocasematch
 # Check the number of arguments
 if [[ $# -eq 0 ]]; then
     echo -e "\\033[1;31mPlease specify:"
-    echo -e " - The code version (Ref, DC, DC-Vec, or Coloring)"
+    echo -e " - The code version (Ref, DC, or Coloring)"
     echo -e " - The distributed memory library (MPI or GASPI)"
     echo -e " - The shared memory runtime (Cilk or OpenMP)\\033[0;39m"
     exit
 fi
 
 # Parse the arguments
-DISTRI=0
-SHARED=0
 VERSION=0
-ARCHI=0
 BULK=0
+VECTO=0
+ARCHI=0
 TREE=0
 STATS=0
-OPTIMIZED=0
 DEBUG=0
 VERBOSE=0
+OPTIMIZED=0
 MATT=0
 PAPI=0
 VTUNE=0
 CILKVIEW=0
+DISTRI=0
+SHARED=0
 
 for i in $@; do
     if [[ $i == "clean" ]]; then
@@ -68,15 +70,6 @@ for i in $@; do
               external_files.mod mod_qvddump.mod 2> /dev/null
         echo -e "\\033[1;32mBuild & bin directories have been cleaned up\\033[0;39m"
         exit
-    elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
-        DISTRI="XMPI"
-        BULK=1
-    elif [[ $i == "gaspi" ]]; then
-        DISTRI="GASPI"
-    elif [[ $i == "cilk" ]]; then
-        SHARED="CILK"
-    elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
-        SHARED="OMP"
     elif [[ $i == "ref" ]]; then
         VERSION="REF"
         BULK=1
@@ -85,26 +78,26 @@ for i in $@; do
         BULK=1
     elif [[ $i == "dc" ]]; then
         VERSION="DC"
-    elif [[ $i == "dc-vec" ]] || [[ $i == "dcvec" ]]; then
-        VERSION="DC_VEC"
+    elif [[ $i == "bulk" ]]; then
+        BULK=1
+    elif [[ $i == "vec" ]] || [[ $i == "vecto" ]]; then
+        VECTO=1
     elif [[ $i == "sse" ]]; then
         ARCHI="SSE"
     elif [[ $i == "avx" ]]; then
         ARCHI="AVX"
     elif [[ $i == "mic" ]]; then
         ARCHI="MIC"
-    elif [[ $i == "bulk" ]]; then
-        BULK=1
     elif [[ $i == "tree" ]]; then
         TREE=1
     elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
         STATS=1
-    elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
-        OPTIMIZED=1
     elif [[ $i == "debug" ]] || [[ $i == "dbg" ]]; then
         DEBUG=1
     elif [[ $i == "verbose" ]]; then
         VERBOSE=1
+    elif [[ $i == "optimized" ]] || [[ $i == "opti" ]]; then
+        OPTIMIZED=1
     elif [[ $i == "matt" ]]; then
         MATT=1
         DEBUG=1
@@ -115,29 +108,28 @@ for i in $@; do
         DEBUG=1
     elif [[ $i == "cilkview" ]]; then
         CILKVIEW=1
+    elif [[ $i == "mpi" ]] || [[ $i == "xmpi" ]]; then
+        DISTRI="XMPI"
+        BULK=1
+    elif [[ $i == "gaspi" ]]; then
+        DISTRI="GASPI"
+    elif [[ $i == "cilk" ]]; then
+        SHARED="CILK"
+    elif [[ $i == "openmp" ]] || [[ $i == "omp" ]]; then
+        SHARED="OMP"
     else
         echo -e "\\033[1;31mOption \"$i\" has been ignored\\033[0;39m"
     fi
 done
 
 # Check arguments
-if [[ $DISTRI != "xmpi" ]] && [[ $DISTRI != "gaspi" ]]; then
-    echo -e "\\033[1;31mPlease specify the distributed memory library (MPI or GASPI) \
+if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] && [[ $VERSION != "dc" ]]
+then
+    echo -e "\\033[1;31mPlease specify the code version (Ref, DC, Coloring) \
              \\033[0;39m"
     exit
 fi
-if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
-    echo -e "\\033[1;31mPlease specify the shared memory runtime (Cilk or OpenMP) \
-             \\033[0;39m"
-    exit
-fi
-if [[ $VERSION != "ref" ]] && [[ $VERSION != "coloring" ]] &&
-   [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_vec" ]]; then
-    echo -e "\\033[1;31mPlease specify the code version (Ref, DC, DC-Vec, Coloring) \
-             \\033[0;39m"
-    exit
-fi
-if [[ $VERSION == "dc_vec" ]] && [[ $ARCHI == 0 ]]; then
+if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
     echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
     exit
 fi
@@ -149,34 +141,40 @@ if [ ! -d "$DC_PATH" ]; then
     echo -e "\\033[1;31mIncorrect path to the D&C library\\033[0;39m"
     exit
 fi
-if [[ $DISTRI == "gaspi" ]] && [[ ! -d "$GASPI_PATH" ]]; then
-    echo -e "\\033[1;31mIncorrect path to the GASPI library\\033[0;39m"
-    exit
-fi
 if [[ $TREE == 1 ]] && [[ ! -d "$METIS_PATH" ]]; then
     echo -e "\\033[1;31mIncorrect path to the METIS library\\033[0;39m"
     exit
 fi
-if [[ $VERSION != "dc" ]]  && [[ $VERSION != "dc_vec" ]]; then
-    TREE=0
+if [[ $DISTRI == "gaspi" ]] && [[ ! -d "$GASPI_PATH" ]]; then
+    echo -e "\\033[1;31mIncorrect path to the GASPI library\\033[0;39m"
+    exit
+fi
+if [[ $DISTRI != "xmpi" ]] && [[ $DISTRI != "gaspi" ]]; then
+    echo -e "\\033[1;31mPlease specify the distributed memory library (MPI or GASPI) \
+             \\033[0;39m"
+    exit
+fi
+if [[ $SHARED != "cilk" ]] && [[ $SHARED != "omp" ]]; then
+    echo -e "\\033[1;31mPlease specify the shared memory runtime (Cilk or OpenMP) \
+             \\033[0;39m"
+    exit
 fi
 
 # Configure D&C library
 DC_ARGUMENTS="$DISTRI $SHARED"
-DC_LIBRARIES=$DC_LIBRARIES\_$DISTRI\_$SHARED
-if [[ $VERSION == "dc_vec" ]]; then
+if [[ $BULK == 1 ]]; then
+    DC_LIBRARIES=$DC_LIBRARIES\_BulkSynchronous
+    DC_ARGUMENTS="$DC_ARGUMENTS bulk"
+else
+    DC_LIBRARIES=$DC_LIBRARIES\_MultithreadedComm
+fi
+if [[ $VECTO == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_VEC_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS vec $ARCHI"
 fi
 if [[ $ARCHI == "mic" ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_$ARCHI
     DC_ARGUMENTS="$DC_ARGUMENTS $ARCHI"
-fi
-if [[ $BULK == 1 ]]; then
-    DC_LIBRARIES=$DC_LIBRARIES\_BulkSynchronous
-    DC_ARGUMENTS="$DC_ARGUMENTS bulk"
-else
-    DC_LIBRARIES=$DC_LIBRARIES\_MultithreadedComm
 fi
 if [[ $TREE == 1 ]]; then
     DC_LIBRARIES=$DC_LIBRARIES\_TreeCreation
@@ -193,7 +191,7 @@ fi
 if [[ $VERBOSE == 1 ]]; then
     DC_ARGUMENTS="$DC_ARGUMENTS verbose"
 fi
-DC_LIBRARIES=$DC_LIBRARIES.so
+DC_LIBRARIES=$DC_LIBRARIES\_$DISTRI\_$SHARED.so
 
 # Compile D&C library
 CURRENT_PATH=`pwd`
@@ -213,12 +211,12 @@ if [[ $ARCHI == "mic" ]]; then
     export MPI_CXX=mpiicpc
 
     cmake -DCMAKE_TOOLCHAIN_FILE="./cmake_template.cmake" \
-          -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES \
+          -DDATA_PATH=$DATA_PATH -DDC_INCLUDE=$DC_INCLUDE -DDC_LIBRARIES=$DC_LIBRARIES\
           -DGASPI_INCLUDE=$GASPI_INCLUDE -DGASPI_LIBRARIES=$GASPI_LIBRARIES \
           -DMETIS_LIBRARIES=$METIS_LIBRARIES -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE \
-          -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DARCHI=$ARCHI \
-          -DBULK=$BULK -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG \
-          -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE \
+          -DDISTRI=$DISTRI -DSHARED=$SHARED -DVERSION=$VERSION -DVECTO=$VECTO \
+          -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE -DOPTIMIZED=$OPTIMIZED \
+          -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT -DPAPI=$PAPI -DVTUNE=$VTUNE \
           -DCILKVIEW=$CILKVIEW \
           . -G "Unix Makefiles"
 else
@@ -226,7 +224,7 @@ else
           -DDC_LIBRARIES=$DC_LIBRARIES -DGASPI_INCLUDE=$GASPI_INCLUDE \
           -DGASPI_LIBRARIES=$GASPI_LIBRARIES -DMETIS_LIBRARIES=$METIS_LIBRARIES \
           -DCILKVIEW_INCLUDE=$CILKVIEW_INCLUDE -DDISTRI=$DISTRI -DSHARED=$SHARED \
-          -DVERSION=$VERSION -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE \
+          -DVERSION=$VERSION -DVECTO=$VECTO -DARCHI=$ARCHI -DBULK=$BULK -DTREE=$TREE \
           -DOPTIMIZED=$OPTIMIZED -DDEBUG=$DEBUG -DVERBOSE=$VERBOSE -DMATT=$MATT \
           -DPAPI=$PAPI -DVTUNE=$VTUNE -DCILKVIEW=$CILKVIEW \
           . -G "Unix Makefiles"
