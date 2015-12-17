@@ -10,7 +10,7 @@ Mini-FEM is parallelized at distributed memory level with MPI domain decompositi
 It can be in addition parallelized at shared memory level with either:
   - A mesh coloring approach based on the OpenMP runtime,
   - A Divide & Conquer (D&C) approach based on the Cilk Plus runtime,
-  - An hybrid D&C + coloring approach also based on the Cilk Plus runtime.
+  - A hybrid D&C + coloring approach also based on the Cilk Plus runtime.
 
 How to compile
 --------------
@@ -23,9 +23,9 @@ A single command is required to compile a new binary:
 
 - The $VERSION variable can be either:
     - "ref" to build a pure MPI version,
-    - "coloring" to build an hybrid MPI+coloring version,
-    - "DC" to build an hybrid MPI+D&C version,
-    - or "dc-vec" to build an hybrid version using MPI, D&C, and coloring.
+    - "coloring" to build a hybrid MPI+coloring version,
+    - "DC" to build a hybrid MPI+D&C version,
+    - or "dc-vec" to build a hybrid version using MPI, D&C, and coloring.
 
 The 2 last options requires to have the DC-lib.
 The path to the DC-lib can be set at the begining of the iMake file.
