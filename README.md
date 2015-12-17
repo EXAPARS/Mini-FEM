@@ -15,7 +15,7 @@ It can be in addition parallelized at shared memory level with either:
 How to compile
 --------------
 
-Mini-FEM requires CMake 2.6 or newer.
+Mini-FEM requires CMake 2.8.10 or newer.
 The build directory is "Mini-FEM/build".
 
 A single command is required to compile a new binary:
