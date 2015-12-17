@@ -31,12 +31,11 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                         int *neighborsList, int nbBlocks, int nbIntf, int nbIntfNodes,
                         int operatorDim, int rank)
 {
-    MPI_Request Req[nbIntf];
-
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
 
     // Initialize communication buffers
+    MPI_Request Req[nbIntf];
     double *bufferSend = new double [nbIntfNodes*operatorDim],
            *bufferRecv = new double [nbIntfNodes*operatorDim];
 
@@ -85,10 +84,7 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
     }
 
     // Wait for incoming data
-    MPI_Waitall(nbIntf, Req, MPI_STATUSES_IGNORE);
-    //    for (int i = 0; i < nbIntf; i++) {
-    //  MPI_Wait (&(Req[i]), MPI_STATUS_IGNORE);
-    //}
+    MPI_Waitall (nbIntf, Req, MPI_STATUSES_IGNORE);
 
     // Assembling local and incoming data
     #ifdef REF
