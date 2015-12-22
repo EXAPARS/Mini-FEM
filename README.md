@@ -10,12 +10,12 @@ Mini-FEM is parallelized at distributed memory level with MPI domain decompositi
 It can be in addition parallelized at shared memory level with either:
   - A mesh coloring approach based on the OpenMP runtime,
   - A Divide & Conquer (D&C) approach based on the Cilk Plus runtime,
-  - An hybrid D&C + coloring approach also based on the Cilk Plus runtime.
+  - A hybrid D&C + coloring approach also based on the Cilk Plus runtime.
 
 How to compile
 --------------
 
-Mini-FEM requires CMake 2.6 or newer.
+Mini-FEM requires CMake 2.8.10 or newer.
 The build directory is "Mini-FEM/build".
 
 A single command is required to compile a new binary:
@@ -23,12 +23,12 @@ A single command is required to compile a new binary:
 
 - The $VERSION variable can be either:
     - "ref" to build a pure MPI version,
-    - "coloring" to build an hybrid MPI+coloring version,
-    - "DC" to build an hybrid MPI+D&C version,
-    - or "vec" to build an hybrid version using MPI, D&C, and coloring.
+    - "coloring" to build a hybrid MPI+coloring version,
+    - "DC" to build a hybrid MPI+D&C version,
+    - or "dc-vec" to build a hybrid version using MPI, D&C, and coloring.
 
 The 2 last options requires to have the DC-lib.
-The path to the DC-lib can be set at the begining of the iMake file.
+The path to the DC-lib can be set at the beginning of the iMake file.
 
 - The $VECTOR_LENGTH variable must be specified when using the D&C Vec version.
   It can be either SSE, AVX or MIC depending on the target architecture.
@@ -75,6 +75,6 @@ How to read the results
 The proto-application output is composed of:
  - A summary of the parameters of execution.
  - The execution time of each prerequisite steps.
- - The execution time, in RDTSC cycles, of the of the matrix assembly and the
+ - The execution time, in RDTSC cycles, of the matrix assembly and the
    preconditioner creation for each iteration.
  - A numerical checking.
