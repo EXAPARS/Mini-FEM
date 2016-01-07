@@ -229,8 +229,11 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
 
-        // Double buffering flip/flop
         #ifdef GASPI
+            // If queue is half full, wait for previous comms
+            GASPI_wait_for_queue_half_full (queueID, rank);
+
+            // Double buffering flip/flop
             gaspi_segment_id_t tmpSegmentID;
             tmpSegmentID        = srcDataSegmentID;
             srcDataSegmentID    = destDataSegmentID;
@@ -238,7 +241,6 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
             tmpSegmentID        = srcOffsetSegmentID;
             srcOffsetSegmentID  = destOffsetSegmentID;
             destOffsetSegmentID = tmpSegmentID;
-            GASPI_wait_for_queue_half_full (queueID);
         #endif
     }
 

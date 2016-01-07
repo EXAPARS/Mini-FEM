@@ -41,7 +41,7 @@ void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
 }
 
 // Waits until given queue is empty if it's at least half full
-void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID)
+void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID, int rank)
 {
     gaspi_number_t queueSizeMax;
     gaspi_number_t queueSize;
@@ -49,7 +49,12 @@ void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID)
     SUCCESS_OR_DIE (gaspi_queue_size_max (&queueSizeMax));
     SUCCESS_OR_DIE (gaspi_queue_size (queueID, &queueSize));
 
-    if (queueSize >= queueSizeMax/2) {
+    if (queueSize > queueSizeMax) {
+        fprintf (stderr, "Rank %d has exceeded its queue capacity: %d / %d\n",
+                 rank, queueSize, queueSizeMax);
+        exit (EXIT_FAILURE);
+    }
+    else if (queueSize >= queueSizeMax/2) {
         SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
     }
 }

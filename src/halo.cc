@@ -279,7 +279,6 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         nbMaxComm          = tmpCommArgs->nbMaxComm,
         operatorDim        = tmpCommArgs->operatorDim,
         rank               = tmpCommArgs->rank;
-//        iter               = tmpCommArgs->iter;
     const gaspi_segment_id_t srcDataSegmentID    = tmpCommArgs->srcDataSegmentID,
                              destDataSegmentID   = tmpCommArgs->destDataSegmentID,
                              srcOffsetSegmentID  = tmpCommArgs->srcOffsetSegmentID,
@@ -314,8 +313,6 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
             destOffsetSegmentOffset = destOffset               * sizeof (int),
             offsetSegmentSize       = size                     * sizeof (int),
             neighbor                = neighborsList[i] - 1;
-        //gaspi_notification_id_t notifyID = iter * nbBlocks * nbMaxComm +
-        //                                   rank * nbMaxComm + commID[i];
         gaspi_notification_id_t notifyID = rank * nbMaxComm + commID[i];
         gaspi_notification_t notifyValue = size << 16 | destOffset;
 
