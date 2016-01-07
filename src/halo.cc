@@ -35,6 +35,7 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
     if (nbBlocks < 2) return;
 
     // Initialize communication buffers
+    MPI_Request Req[nbIntf];
     double *bufferSend = new double [nbIntfNodes*operatorDim],
            *bufferRecv = new double [nbIntfNodes*operatorDim];
 
@@ -46,7 +47,7 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
             source = neighborsList[i] - 1,
             tag    = neighborsList[i] + 100;
         MPI_Irecv (&(bufferRecv[begin*operatorDim]), size, MPI_DOUBLE, source, tag,
-                   MPI_COMM_WORLD, &(neighborsList[2*nbIntf+i]));
+                   MPI_COMM_WORLD, &(Req[i]));
     }
 
     // Initialize send buffer
@@ -82,10 +83,8 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
                   MPI_COMM_WORLD);
     }
 
-    // Waiting incoming data
-    for (int i = 0; i < nbIntf; i++) {
-        MPI_Wait (&(neighborsList[2*nbIntf+i]), MPI_STATUS_IGNORE);
-    }
+    // Wait for incoming data
+    MPI_Waitall (nbIntf, Req, MPI_STATUSES_IGNORE);
 
     // Assembling local and incoming data
     #ifdef REF
