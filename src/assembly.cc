@@ -23,6 +23,8 @@
 #include "halo.h"
 #include "assembly.h"
 
+#define ARITHMETIC_INTENSITY_MULTIPLIER 10
+
 #ifdef DC_VEC
 // Vectorially compute the elements coefficient
 inline void elem_coef_vec (double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE],
@@ -148,7 +150,9 @@ void assembly_ela_vec (void *userArgs, DCargs_t *DCargs)
 
         // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE];
-        elem_coef_vec (elemCoef, coord, elemToNode, elem);
+        for (int i = 0; i < ARITHMETIC_INTENSITY_MULTIPLIER; i++) {
+            elem_coef_vec (elemCoef, coord, elemToNode, elem);
+        }
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -268,7 +272,9 @@ void assembly_lap_vec (void *userArgs, DCargs_t *DCargs)
 
         // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE][VEC_SIZE];
-        elem_coef_vec (elemCoef, coord, elemToNode, elem);
+        for (int i = 0; i < ARITHMETIC_INTENSITY_MULTIPLIER; i++) {
+            elem_coef_vec (elemCoef, coord, elemToNode, elem);
+        }
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -365,7 +371,9 @@ void assembly_ela_seq (void *userArgs, int firstElem, int lastElem)
 
         // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE];
-        elem_coef_seq (elemCoef, coord, elemToNode, elem);
+        for (int i = 0; i < ARITHMETIC_INTENSITY_MULTIPLIER; i++) {
+            elem_coef_seq (elemCoef, coord, elemToNode, elem);
+        }
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
@@ -516,7 +524,9 @@ void assembly_lap_seq (void *userArgs, int firstElem, int lastElem)
 
         // Compute the element coefficient
         double elemCoef[DIM_ELEM][DIM_NODE];
-        elem_coef_seq (elemCoef, coord, elemToNode, elem);
+        for (int i = 0; i < ARITHMETIC_INTENSITY_MULTIPLIER; i++) {
+            elem_coef_seq (elemCoef, coord, elemToNode, elem);
+        }
 
         // Optimized version with precomputed edge index
         #ifdef OPTIMIZED
