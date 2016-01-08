@@ -60,8 +60,8 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
         exit (EXIT_FAILURE);
     }
     meshName = argValue[1];
-    if (meshName.compare ("LM6") && meshName.compare ("EIB") &&
-        meshName.compare ("FGN")) {
+    if (meshName.compare ("LM6")  && meshName.compare ("EIB") &&
+        meshName.compare ("FGN1") && meshName.compare ("FGN4")) {
         if (rank == 0) {
 		    cerr << "Incorrect argument \"" << meshName << "\".\n";
 		    help ();
