@@ -114,9 +114,8 @@ int main (int argCount, char **argValue)
         *intfIndex = nullptr, *intfNodes = nullptr, *intfDestIndex = nullptr,
         *neighborsList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
         *checkBounds = nullptr, *elemToEdge = nullptr;
-    int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbNotifications = 0,
-        nbMaxComm = 0;
+    int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbBoundNodes, operatorDim,
+        operatorID, nbIter, error, nbNotifications = 0, nbMaxComm = 0;
 
     // Arguments initialization
     check_args (argCount, argValue, &nbIter, rank);
@@ -138,7 +137,7 @@ int main (int argCount, char **argValue)
     }
     read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
                      &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
-                     &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
+                     &nbIntfNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
         timer.stop_time ();
         cout << "done  (" << timer.get_avg_time () << " seconds)\n";
