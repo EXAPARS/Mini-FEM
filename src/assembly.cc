@@ -23,7 +23,7 @@
 #include "halo.h"
 #include "assembly.h"
 
-#define ARITHMETIC_INTENSITY_MULTIPLIER 10
+#define ARITHMETIC_INTENSITY_MULTIPLIER 1
 
 #ifdef DC_VEC
 // Vectorially compute the elements coefficient
@@ -617,12 +617,12 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
                int nbEdges, int operatorDim, int operatorID
 #ifdef MULTITHREADED_COMM
                , double *prec, double *srcDataSegment, int *srcOffsetSegment,
-               int *neighborsList, int *intfIndex, int *intfDestIndex, int nbBlocks,
+               int *neighborsList, int *intfIndex, int *intfDstIndex, int nbBlocks,
                int nbIntf, int nbMaxComm, int rank, int iter,
                const gaspi_segment_id_t srcDataSegmentID,
-               const gaspi_segment_id_t destDataSegmentID,
+               const gaspi_segment_id_t dstDataSegmentID,
                const gaspi_segment_id_t srcOffsetSegmentID,
-               const gaspi_segment_id_t destOffsetSegmentID,
+               const gaspi_segment_id_t dstOffsetSegmentID,
                const gaspi_queue_id_t queueID
 #endif
                )
@@ -638,9 +638,9 @@ void assembly (double *coord, double *nodeToNodeValue, int *nodeToNodeRow,
     #ifdef MULTITHREADED_COMM
         userCommArgs_t userCommArgs = {
             prec, srcDataSegment, srcOffsetSegment, neighborsList, intfIndex,
-            intfDestIndex, nbBlocks, nbIntf, nbMaxComm, operatorDim, rank, iter,
-            srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
-            destOffsetSegmentID, queueID
+            intfDstIndex, nbBlocks, nbIntf, nbMaxComm, operatorDim, rank, iter,
+            srcDataSegmentID, dstDataSegmentID, srcOffsetSegmentID,
+            dstOffsetSegmentID, queueID
         };
     #endif
 

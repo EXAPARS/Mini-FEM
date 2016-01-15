@@ -16,27 +16,34 @@
 
 #ifdef GASPI
 
+#include <pthread.h>
+#include <cmath>
+
 #include "globals.h"
 #include "GASPI_handler.h"
 
+int *segmentPtr = nullptr, *commPtr = nullptr;
+pthread_mutex_t *segmentMutex = nullptr;
+
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDstIndex, int nbBlocks, int rank,
                      gaspi_segment_id_t srcDataSegmentID,
-                     gaspi_segment_id_t destDataSegmentID,
+                     gaspi_segment_id_t dstDataSegmentID,
                      gaspi_segment_id_t srcOffsetSegmentID,
-                     gaspi_segment_id_t destOffsetSegmentID,
+                     gaspi_segment_id_t dstOffsetSegmentID,
                      gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
-    delete[] intfDestIndex;
+    delete[] segmentMutex, delete[] commPtr, delete[] segmentPtr;
+    delete[] intfDstIndex;
 
     SUCCESS_OR_DIE (gaspi_wait (queueID, GASPI_BLOCK));
     SUCCESS_OR_DIE (gaspi_barrier (GASPI_GROUP_ALL, GASPI_BLOCK));
     SUCCESS_OR_DIE (gaspi_segment_delete (srcDataSegmentID));
-    SUCCESS_OR_DIE (gaspi_segment_delete (destDataSegmentID));
+    SUCCESS_OR_DIE (gaspi_segment_delete (dstDataSegmentID));
     SUCCESS_OR_DIE (gaspi_segment_delete (srcOffsetSegmentID));
-    SUCCESS_OR_DIE (gaspi_segment_delete (destOffsetSegmentID));
+    SUCCESS_OR_DIE (gaspi_segment_delete (dstOffsetSegmentID));
     SUCCESS_OR_DIE (gaspi_proc_term (GASPI_BLOCK));
 }
 
@@ -78,9 +85,9 @@ void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
 }
 
 // Get the number of notifications coming from adjacent domains
-void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
+void GASPI_nb_notifications_exchange (int *intfIndex, int *neighborsList,
                                       int *nbNotifications, int nbIntf, int nbBlocks,
-                                      int rank, gaspi_segment_id_t destOffsetSegmentID,
+                                      int rank, gaspi_segment_id_t dstOffsetSegmentID,
                                       gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
@@ -88,9 +95,14 @@ void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
 
     // For each interface, send the number of notifications
     for (int i = 0; i < nbIntf; i++) {
+        int begin  = intfIndex[i],
+            end    = intfIndex[i+1],
+            size   = end - begin,
+            nbComm = ceil ((float)size / COMM_SIZE);
+
         // The +1 is required since a notification value cannot be equal to 0...
-        SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, neighborsList[i]-1, rank,
-                                      nbDCcomm[i]+1, queueID, GASPI_BLOCK));
+        SUCCESS_OR_DIE (gaspi_notify (dstOffsetSegmentID, neighborsList[i]-1, rank,
+                                      nbComm+1, queueID, GASPI_BLOCK));
     }
 
     // For each interface, receive the number of notifications coming from adjacent
@@ -98,9 +110,9 @@ void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
     for (int i = 0; i < nbIntf; i++) {
         gaspi_notification_t notifyValue;
         gaspi_notification_id_t notifyID;
-        SUCCESS_OR_DIE (gaspi_notify_waitsome (destOffsetSegmentID, neighborsList[i]-1,
+        SUCCESS_OR_DIE (gaspi_notify_waitsome (dstOffsetSegmentID, neighborsList[i]-1,
                                                1, &notifyID, GASPI_BLOCK));
-        SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, notifyID,
+        SUCCESS_OR_DIE (gaspi_notify_reset (dstOffsetSegmentID, notifyID,
                                             &notifyValue));
 
         // Remove the +1 of the local offset
@@ -112,9 +124,9 @@ void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
 }
 
 // Get the adjacent domains destination offset
-void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsList,
+void GASPI_offset_exchange (int *intfDstIndex, int *intfIndex, int *neighborsList,
                             int nbIntf, int nbBlocks, int rank,
-                            gaspi_segment_id_t destOffsetSegmentID,
+                            gaspi_segment_id_t dstOffsetSegmentID,
                             gaspi_queue_id_t queueID)
 {
     // If there is only one domain, do nothing
@@ -123,7 +135,7 @@ void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsLi
     // For each interface, send local offset to adjacent domain
     for (int i = 0; i < nbIntf; i++) {
         // The +1 is required since a notification value cannot be equal to 0...
-        SUCCESS_OR_DIE (gaspi_notify (destOffsetSegmentID, neighborsList[i]-1, rank,
+        SUCCESS_OR_DIE (gaspi_notify (dstOffsetSegmentID, neighborsList[i]-1, rank,
                                       intfIndex[i]+1, queueID, GASPI_BLOCK));
     }
 
@@ -131,13 +143,13 @@ void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsLi
     for (int i = 0; i < nbIntf; i++) {
         gaspi_notification_t notifyValue;
         gaspi_notification_id_t notifyID;
-        SUCCESS_OR_DIE (gaspi_notify_waitsome (destOffsetSegmentID, neighborsList[i]-1,
+        SUCCESS_OR_DIE (gaspi_notify_waitsome (dstOffsetSegmentID, neighborsList[i]-1,
                                                1, &notifyID, GASPI_BLOCK));
-        SUCCESS_OR_DIE (gaspi_notify_reset (destOffsetSegmentID, notifyID,
+        SUCCESS_OR_DIE (gaspi_notify_reset (dstOffsetSegmentID, notifyID,
                                             &notifyValue));
 
         // Remove the +1 of the local offset
-        intfDestIndex[i] = notifyValue - 1;
+        intfDstIndex[i] = notifyValue - 1;
     }
 
     // Ensure that offsets are received by all
@@ -145,50 +157,57 @@ void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsLi
 }
 
 // Initialization of the GASPI segments & creation of the segment pointers
-void GASPI_init (double **srcDataSegment, double **destDataSegment,
-                 int **srcOffsetSegment, int **destOffsetSegment,
-                 int **intfDestIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
+void GASPI_init (double **srcDataSegment, double **dstDataSegment,
+                 int **srcOffsetSegment, int **dstOffsetSegment,
+                 int **intfDstIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
                  int rank, int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
-                 gaspi_segment_id_t *destDataSegmentID,
+                 gaspi_segment_id_t *dstDataSegmentID,
                  gaspi_segment_id_t *srcOffsetSegmentID,
-                 gaspi_segment_id_t *destOffsetSegmentID, gaspi_queue_id_t *queueID)
+                 gaspi_segment_id_t *dstOffsetSegmentID, gaspi_queue_id_t *queueID)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
-    *intfDestIndex = new int [nbIntf];
 
-    gaspi_pointer_t srcDataSegmentPtr = NULL, destDataSegmentPtr = NULL,
-                  srcOffsetSegmentPtr = NULL, destOffsetSegmentPtr = NULL;
+    *intfDstIndex = new int [nbIntf];
+    segmentPtr    = new int [nbIntf] ();
+    commPtr       = new int [nbIntf] ();
+    segmentMutex  = new pthread_mutex_t [nbIntf];
+    for (int i = 0; i < nbIntf; i++) {
+        segmentMutex[i] = PTHREAD_MUTEX_INITIALIZER;
+    }
+
+    gaspi_pointer_t srcDataSegmentPtr = NULL, dstDataSegmentPtr = NULL,
+                  srcOffsetSegmentPtr = NULL, dstOffsetSegmentPtr = NULL;
     gaspi_size_t dataSegmentSize = nbIntfNodes * operatorDim * sizeof (double),
                offsetSegmentSize = nbIntfNodes * sizeof (int);
 
-    *srcDataSegmentID    = 0;
-    *destDataSegmentID   = 1;
-    *srcOffsetSegmentID  = 3;
-    *destOffsetSegmentID = 4;
-    *queueID             = 0;
+    *srcDataSegmentID   = 0;
+    *dstDataSegmentID   = 1;
+    *srcOffsetSegmentID = 3;
+    *dstOffsetSegmentID = 4;
+    *queueID            = 0;
 
     SUCCESS_OR_DIE (gaspi_segment_create (*srcDataSegmentID, dataSegmentSize,
                                           GASPI_GROUP_ALL, GASPI_BLOCK,
                                           GASPI_ALLOC_DEFAULT));
-    SUCCESS_OR_DIE (gaspi_segment_create (*destDataSegmentID, dataSegmentSize,
+    SUCCESS_OR_DIE (gaspi_segment_create (*dstDataSegmentID, dataSegmentSize,
                                           GASPI_GROUP_ALL, GASPI_BLOCK,
                                           GASPI_ALLOC_DEFAULT));
     SUCCESS_OR_DIE (gaspi_segment_create (*srcOffsetSegmentID, offsetSegmentSize,
                                           GASPI_GROUP_ALL, GASPI_BLOCK,
                                           GASPI_ALLOC_DEFAULT));
-    SUCCESS_OR_DIE (gaspi_segment_create (*destOffsetSegmentID, offsetSegmentSize,
+    SUCCESS_OR_DIE (gaspi_segment_create (*dstOffsetSegmentID, offsetSegmentSize,
                                           GASPI_GROUP_ALL, GASPI_BLOCK,
                                           GASPI_ALLOC_DEFAULT));
     SUCCESS_OR_DIE (gaspi_segment_ptr (*srcDataSegmentID, &srcDataSegmentPtr));
-    SUCCESS_OR_DIE (gaspi_segment_ptr (*destDataSegmentID, &destDataSegmentPtr));
+    SUCCESS_OR_DIE (gaspi_segment_ptr (*dstDataSegmentID, &dstDataSegmentPtr));
     SUCCESS_OR_DIE (gaspi_segment_ptr (*srcOffsetSegmentID, &srcOffsetSegmentPtr));
-    SUCCESS_OR_DIE (gaspi_segment_ptr (*destOffsetSegmentID, &destOffsetSegmentPtr));
+    SUCCESS_OR_DIE (gaspi_segment_ptr (*dstOffsetSegmentID, &dstOffsetSegmentPtr));
 
-    *srcDataSegment    = (double*)srcDataSegmentPtr;
-    *destDataSegment   = (double*)destDataSegmentPtr;
-    *srcOffsetSegment  = (int*)srcOffsetSegmentPtr;
-    *destOffsetSegment = (int*)destOffsetSegmentPtr;
+    *srcDataSegment   = (double*)srcDataSegmentPtr;
+    *dstDataSegment   = (double*)dstDataSegmentPtr;
+    *srcOffsetSegment = (int*)srcOffsetSegmentPtr;
+    *dstOffsetSegment = (int*)dstOffsetSegmentPtr;
 }
 
 #endif

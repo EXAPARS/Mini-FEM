@@ -27,10 +27,10 @@
     // function
     typedef struct userCommArgs_s {
         double *prec, *srcDataSegment;
-        int *srcOffsetSegment, *neighborsList, *intfIndex, *intfDestIndex;
+        int *srcOffsetSegment, *neighborsList, *intfIndex, *intfDstIndex;
         int nbBlocks, nbIntf, nbMaxComm, operatorDim, rank, iter;
-        const gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
-                                 srcOffsetSegmentID, destOffsetSegmentID;
+        const gaspi_segment_id_t srcDataSegmentID, dstDataSegmentID,
+                                 srcOffsetSegmentID, dstOffsetSegmentID;
         const gaspi_queue_id_t queueID;
     } userCommArgs_t;
 #endif
@@ -46,21 +46,21 @@ void MPI_halo_exchange (double *prec, int *intfIndex, int *intfNodes,
 
 // Halo exchange between GASPI ranks
 void GASPI_halo_exchange (double *prec, double *srcDataSegment,
-                          double *destDataSegment, int *intfIndex, int *intfNodes,
-                          int *neighborsList, int *intfDestIndex, int nbBlocks,
+                          double *dstDataSegment, int *intfIndex, int *intfNodes,
+                          int *neighborsList, int *intfDstIndex, int nbBlocks,
                           int nbIntf, int operatorDim, int rank, int iter,
                           const gaspi_segment_id_t srcDataSegmentID,
-                          const gaspi_segment_id_t destDataSegmentID,
+                          const gaspi_segment_id_t dstDataSegmentID,
                           const gaspi_queue_id_t queueID);
 
 #endif
 #ifdef MULTITHREADED_COMM
 
 // Wait for multithreaded GASPI notifications
-void GASPI_multithreaded_wait (double *prec, double *destDataSegment, int *intfNodes,
-                               int *destOffsetSegment, int nbNotifications,
-                               int nbBlocks, int operatorDim, int iter,
-                               gaspi_segment_id_t destOffsetSegmentID, int rank);
+void GASPI_multithreaded_wait (double *prec, double *dstDataSegment, int *intfNodes,
+                               int *dstOffsetSegment, int nbNotifications,
+                               int nbBlocks, int operatorDim, int rank,
+                               gaspi_segment_id_t dstOffsetSegmentID);
 
 // Send initialized parts of the preconditioner
 void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs);

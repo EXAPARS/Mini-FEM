@@ -31,7 +31,7 @@ void read_ref_assembly (double *refMatrixNorm, double *refPrecNorm, int nbBlocks
                       + to_string ((long long)rank);
     ifstream refASM (fileName, ios::in);
     if (!refASM.is_open ()) {
-        cerr << "Error: cannot read reference checking: " << fileName << "!\n";
+        cerr << "Error: cannot read reference checking: " << fileName << ".\n";
         exit (EXIT_FAILURE);
     }
     refASM >> *refMatrixNorm >> *refPrecNorm;
@@ -50,7 +50,7 @@ void store_ref_assembly_ (double *refMatrix, double *refPrec, int *nbEdges,
                                      to_string ((long long)*rank);
     ofstream refASM (fileName, ios::out | ios::trunc);
     if (!refASM.is_open ()) {
-        cerr << "Error: cannot store reference checking!\n";
+        cerr << "Error: cannot store reference checking.\n";
         exit (EXIT_FAILURE);
     }
     refASM << setprecision(17) << refMatrixNorm << endl << refPrecNorm << endl;
@@ -106,7 +106,7 @@ void store_input_data_ (double *coord, int *elemToNode, int *neighborsList,
                                   to_string ((long long)*rank);
     ofstream inputFile (fileName, ios::out | ios::trunc | ios::binary);
     if (!inputFile.is_open ()) {
-        cerr << "Error: cannot store input data!\n";
+        cerr << "Error: cannot store input data.\n";
         exit (EXIT_FAILURE);
     }
 
