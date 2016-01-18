@@ -26,7 +26,7 @@ int *segmentPtr = nullptr, *commPtr = nullptr;
 pthread_mutex_t *segmentMutex = nullptr;
 
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *intfDstIndex, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDstIndex, int nbBlocks,
                      gaspi_segment_id_t srcDataSegmentID,
                      gaspi_segment_id_t dstDataSegmentID,
                      gaspi_segment_id_t srcOffsetSegmentID,
@@ -68,7 +68,7 @@ void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID, int rank)
 
 // Get the max number of communications
 void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
-                                  int nbBlocks, int rank)
+                                  int nbBlocks)
 {
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -160,7 +160,7 @@ void GASPI_offset_exchange (int *intfDstIndex, int *intfIndex, int *neighborsLis
 void GASPI_init (double **srcDataSegment, double **dstDataSegment,
                  int **srcOffsetSegment, int **dstOffsetSegment,
                  int **intfDstIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
-                 int rank, int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
+                 int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
                  gaspi_segment_id_t *dstDataSegmentID,
                  gaspi_segment_id_t *srcOffsetSegmentID,
                  gaspi_segment_id_t *dstOffsetSegmentID, gaspi_queue_id_t *queueID)

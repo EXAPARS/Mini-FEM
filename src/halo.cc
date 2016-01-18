@@ -310,6 +310,11 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
             end      = intfDCindex[i+1],
             dataSize = end - begin;
         if (dataSize <= 0) continue;
+        // If there is more than 1 comm per DC node, queue capacity may be exceeded
+        else if (dataSize > COMM_SIZE) {
+            cerr << "Error: please increase communication max size.\n";
+            exit (EXIT_FAILURE);
+        }
 
         // Init variables
         int mySegmentPtr, myCommPtr, srcSegmentPtr, dataCommSize, offsetCommSize,
@@ -347,15 +352,9 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         // If current D&C node handles a comm
         if (handleComm) {
 
-            // If there is more than 1 comm per DC node, queue capacity may be exceeded
-            int commSize = (mySegmentPtr + dataSize - myCommPtr);
-            if ((commSize / COMM_SIZE) > 1) {
-                cerr << "Error: communication max size is too small.\n";
-                exit (EXIT_FAILURE);
-            }
-
             // Init comm variables
-            int srcCommPtr = intfIndex[i]    + myCommPtr,
+            int commSize   = (mySegmentPtr + dataSize - myCommPtr),
+                srcCommPtr = intfIndex[i]    + myCommPtr,
                 dstCommPtr = intfDstIndex[i] + myCommPtr,
                 srcDataSegmentPtr   = srcCommPtr * operatorDim * sizeof (double),
                 dstDataSegmentPtr   = dstCommPtr * operatorDim * sizeof (double),
@@ -366,6 +365,10 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
 
             // If it's a last comm
             if (lastComm) {
+                if (commSize > COMM_SIZE) {
+                    cerr << "Error: please change communication max size.\n";
+                    exit (EXIT_FAILURE);
+                }
                 dataCommSize   = commSize * operatorDim * sizeof (double);
                 offsetCommSize = commSize               * sizeof (int);
                 notifyValue    = commSize << 16 | dstCommPtr;

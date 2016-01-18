@@ -260,7 +260,7 @@ int main (int argCount, char **argValue)
         gaspi_queue_id_t queueID;
         GASPI_init (&srcDataSegment, &dstDataSegment, &srcOffsetSegment,
                     &dstOffsetSegment, &intfDstIndex, nbIntf, nbIntfNodes,
-                    nbBlocks, rank, operatorDim, &srcDataSegmentID, &dstDataSegmentID,
+                    nbBlocks, operatorDim, &srcDataSegmentID, &dstDataSegmentID,
                     &srcOffsetSegmentID, &dstOffsetSegmentID, &queueID);
         GASPI_offset_exchange (intfDstIndex, intfIndex, neighborsList, nbIntf,
                                nbBlocks, rank, dstOffsetSegmentID, queueID);
@@ -291,7 +291,7 @@ int main (int argCount, char **argValue)
                           nbIntf, rank);
         #ifdef MULTITHREADED_COMM
             // Get the max number of comms to compute the notifyID
-            GASPI_max_nb_communications (nbDCcomm, &nbMaxComm, nbIntf, nbBlocks, rank);
+            GASPI_max_nb_communications (nbDCcomm, &nbMaxComm, nbIntf, nbBlocks);
             delete[] nbDCcomm;
         #endif
         if (rank == 0) {
@@ -373,9 +373,8 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (intfDstIndex, nbBlocks, rank, srcDataSegmentID,
-                        dstDataSegmentID, srcOffsetSegmentID, dstOffsetSegmentID,
-                        queueID);
+        GASPI_finalize (intfDstIndex, nbBlocks, srcDataSegmentID, dstDataSegmentID,
+                        srcOffsetSegmentID, dstOffsetSegmentID, queueID);
     #endif
 
 	return EXIT_SUCCESS;
