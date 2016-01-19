@@ -21,6 +21,7 @@
     #include <cilk/cilk.h>
 #endif
 #include <pthread.h>
+#include <cmath>
 #include <iostream>
 
 #include "globals.h"
@@ -294,10 +295,9 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
     const gaspi_queue_id_t queueID = commArgs->queueID;
 
     // Get D&C arguments
-    int *intfDCindex  = DCcommArgs->intfIndex,
-        *intfDCnodes  = DCcommArgs->intfNodes,
-        *intfDCdst    = DCcommArgs->intfDst,
-        *commID       = DCcommArgs->commID;
+    int *intfDCindex = DCcommArgs->intfIndex,
+        *intfDCnodes = DCcommArgs->intfNodes,
+        *intfDCdst   = DCcommArgs->intfDst;
 
     // If there is only one domain, do nothing
     if (nbBlocks < 2) return;
@@ -317,16 +317,17 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         }
 
         // Init variables
-        int mySegmentPtr, myCommPtr, srcSegmentPtr, dataCommSize, offsetCommSize,
-            neighbor = neighborsList[i] - 1;
+        int mySegmentPtr, myCommPtr, myCommSize, srcSegmentPtr, dataCommSize,
+            offsetCommSize, neighbor = neighborsList[i] - 1;
         bool handleComm = false, lastComm = false;
 
         // Get the current pointers position and update them
         pthread_mutex_lock (&(segmentMutex[i]));
-        mySegmentPtr   = segmentPtr[i],
+        mySegmentPtr   = segmentPtr[i];
         myCommPtr      = commPtr[i];
         segmentPtr[i] += dataSize;
-        if (segmentPtr[i] >= (myCommPtr + COMM_SIZE)) {
+        myCommSize     = segmentPtr[i] - myCommPtr;
+        if (myCommSize >= COMM_SIZE) {
             commPtr[i] += COMM_SIZE;
             handleComm = true;
         }
@@ -353,7 +354,7 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
         if (handleComm) {
 
             // Init comm variables
-            int commSize   = (mySegmentPtr + dataSize - myCommPtr),
+            int myCommID   = myCommPtr / COMM_SIZE,
                 srcCommPtr = intfIndex[i]    + myCommPtr,
                 dstCommPtr = intfDstIndex[i] + myCommPtr,
                 srcDataSegmentPtr   = srcCommPtr * operatorDim * sizeof (double),
@@ -361,17 +362,46 @@ void GASPI_multithreaded_send (void *userCommArgs, DCcommArgs_t *DCcommArgs)
                 srcOffsetSegmentPtr = srcCommPtr               * sizeof (int),
                 dstOffsetSegmentPtr = dstCommPtr               * sizeof (int);
             gaspi_notification_t notifyValue;
-            gaspi_notification_id_t notifyID = rank * nbMaxComm + commID[i];
+            gaspi_notification_id_t notifyID = rank * nbMaxComm + myCommID;
 
             // If it's a last comm
             if (lastComm) {
-                if (commSize > COMM_SIZE) {
-                    cerr << "Error: please change communication max size.\n";
-                    exit (EXIT_FAILURE);
+
+                // If last comm exceeded max comm size, split it in two
+                if (myCommSize > COMM_SIZE) {
+
+                    // Send first part to adjacent domain
+                    dataCommSize   = COMM_SIZE * operatorDim * sizeof (double);
+                    offsetCommSize = COMM_SIZE               * sizeof (int);
+                    notifyValue    = COMM_SIZE << 16 | dstCommPtr;
+                    SUCCESS_OR_DIE (gaspi_write (srcDataSegmentID, srcDataSegmentPtr,
+                                                 neighbor, dstDataSegmentID,
+                                                 dstDataSegmentPtr, dataCommSize,
+                                                 queueID, GASPI_BLOCK));
+                    SUCCESS_OR_DIE (gaspi_write_notify (srcOffsetSegmentID,
+                                                        srcOffsetSegmentPtr, neighbor,
+                                                        dstOffsetSegmentID,
+                                                        dstOffsetSegmentPtr,
+                                                        offsetCommSize, notifyID,
+                                                        notifyValue, queueID,
+                                                        GASPI_BLOCK));
+
+                    // Init second part
+                    myCommPtr  += COMM_SIZE;
+                    myCommSize -= COMM_SIZE;
+                    myCommID++;
+                    srcCommPtr = intfIndex[i]    + myCommPtr,
+                    dstCommPtr = intfDstIndex[i] + myCommPtr,
+                    srcDataSegmentPtr   = srcCommPtr * operatorDim * sizeof (double),
+                    dstDataSegmentPtr   = dstCommPtr * operatorDim * sizeof (double),
+                    srcOffsetSegmentPtr = srcCommPtr               * sizeof (int),
+                    dstOffsetSegmentPtr = dstCommPtr               * sizeof (int);
+                    notifyID = rank * nbMaxComm + myCommID;
                 }
-                dataCommSize   = commSize * operatorDim * sizeof (double);
-                offsetCommSize = commSize               * sizeof (int);
-                notifyValue    = commSize << 16 | dstCommPtr;
+
+                dataCommSize   = myCommSize * operatorDim * sizeof (double);
+                offsetCommSize = myCommSize               * sizeof (int);
+                notifyValue    = myCommSize << 16 | dstCommPtr;
             }
             else {
                 dataCommSize   = COMM_SIZE * operatorDim * sizeof (double);

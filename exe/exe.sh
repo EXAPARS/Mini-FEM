@@ -7,7 +7,7 @@ export CILK_NWORKERS=2
 #./bin/miniFEM_REF_BulkSynchronous_GASPI_CILK LM6 ela 15
 #./bin/miniFEM_DC_BulkSynchronous_TreeCreation_GASPI_CILK LM6 ela 15
 #./bin/miniFEM_DC_BulkSynchronous_GASPI_CILK LM6 ela 15
-#./bin/miniFEM_DC_MultithreadedComm_TreeCreation_GASPI_CILK EIB ela 5
-./bin/miniFEM_DC_MultithreadedComm_GASPI_CILK EIB  ela 5
+#./bin/miniFEM_DC_MultithreadedComm_TreeCreation_GASPI_CILK LM6 ela 5
+./bin/miniFEM_DC_MultithreadedComm_GASPI_CILK EIB ela 15
 #xterm -e gdb --ex run --args ./bin/miniFEM_DC_MultithreadedComm_TreeCreation_Debug_GASPI_CILK EIB ela 1
 #xterm -e gdb --ex run --args ./bin/miniFEM_DC_MultithreadedComm_Debug_GASPI_CILK EIB ela 1
