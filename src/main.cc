@@ -22,6 +22,7 @@
 #endif
 #include <iostream>
 #include <iomanip>
+#include <cstdlib>
 #include <DC.h>
 
 #include "globals.h"
@@ -42,7 +43,7 @@ extern "C" {
 string meshName, operatorName;
 int *colorToElem = nullptr;
 int nbTotalColors;
-//int MAX_ELEM_PER_PART = strtol (getenv ("elemPerPart"), nullptr, 0);
+//int MAX_ELEM_PER_PART = strtol (getenv ("maxElemPerPart"), nullptr, 0);
 
 // Help message
 void help () {

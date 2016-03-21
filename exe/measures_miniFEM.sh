@@ -7,6 +7,7 @@ MACHINE_FILE=$EXE_DIR/GASPI_machine_file_$NB_NODES\_$NB_PROCESS_PER_NODE
 TEST_CASE=EIB
 VECTOR_LENGTH=AVX
 NB_ITERATIONS=50
+NB_RUNS=4
 
 # Set the Anselm environment
 #module load cmake/2.8.11 PrgEnv-intel/14.0.1 gpi2/1.1.1 impi/4.1.1.036
@@ -41,16 +42,13 @@ do
 
             for OPERATOR in 'ela'
             do
-                for PART_SIZE in 200
+                for PART_SIZE in 50 100 150 200 250 300 350 400
                 do
-                    export elemPerPart=$PART_SIZE
+                    export maxElemPerPart=$PART_SIZE
 
-                    # Set the number of processes and threads
-#                    for NB_PROCESS_PER_NODE in 1 2 4 8 16
-#                    do
-                        if [ $NB_PROCESS_PER_NODE == 2 ] && [ $NB_NODES == 1 ]; then
-                            continue
-                        fi
+                    for COMM_SIZE in 100 200 300 400 400 500 750 1000 1250 1500 1750 2000
+                    do
+                        export commSize=$COMM_SIZE
 
                         for NB_THREADS_PER_PROCESS in 1 4 8 16
                         do
@@ -78,6 +76,8 @@ do
                                 echo "cd $EXE_DIR" >> $EXE_FILE
                                 echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" \
                                      >> $EXE_FILE
+                                echo "export maxElemPerPart=$PART_SIZE" >> $EXE_FILE
+                                echo "export commSize=$COMM_SIZE" >> $EXE_FILE
                                 if [ $SHARED == "CILK" ]; then
                                     echo "export CILK_NWORKERS=$NB_THREADS_PER_PROCESS" \
                                          >> $EXE_FILE
@@ -96,18 +96,21 @@ do
                                 done > $MACHINE_FILE
                             fi
 
-                            # Create the output file
-                            OUTPUT_FILE=$EXE_DIR/stdout_$TEST_CASE\_$VERSION\_$OPERATOR\_$PART_SIZE\_$DISTRI\_$SHARED\_$NB_NODES\_$NB_PROCESS_PER_NODE\_$NB_THREADS_PER_PROCESS
+                            for RUN in `seq 1 $NB_RUNS`
+                            do
+                                # Create the output file
+                                OUTPUT_FILE=$EXE_DIR/stdout_$TEST_CASE\_$VERSION\_$OPERATOR\_$PART_SIZE\_$COMM_SIZE\_$DISTRI\_$SHARED\_$NB_NODES\_$NB_PROCESS_PER_NODE\_$NB_THREADS_PER_PROCESS\_run$RUN
 
-                            # Launch the job
-                            if [ $DISTRI == "XMPI" ]; then
-                                mpirun -np $NB_TOTAL_PROCESS $BINARY $TEST_CASE \
-                                           $OPERATOR $NB_ITERATIONS > $OUTPUT_FILE
-                            elif [ $DISTRI == "GASPI" ]; then
-                                gaspi_run -m $MACHINE_FILE $EXE_FILE > $OUTPUT_FILE
-                            fi
+                                # Launch the job
+                                if [ $DISTRI == "XMPI" ]; then
+                                    mpirun -np $NB_TOTAL_PROCESS $BINARY $TEST_CASE \
+                                               $OPERATOR $NB_ITERATIONS > $OUTPUT_FILE
+                                elif [ $DISTRI == "GASPI" ]; then
+                                    gaspi_run -m $MACHINE_FILE $EXE_FILE > $OUTPUT_FILE
+                                fi
+                            done
                         done
-#                    done
+                    done
                 done
             done
         done

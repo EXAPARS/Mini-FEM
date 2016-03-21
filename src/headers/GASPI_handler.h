@@ -22,6 +22,7 @@
 #include <GASPI.h>
 
 #define COMM_SIZE 100
+//extern int COMM_SIZE;
 
 // Free the destination offset array, flush the GASPI queue & free the segments
 void GASPI_finalize (int *intfDstIndex, int nbBlocks,

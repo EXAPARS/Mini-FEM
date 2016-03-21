@@ -16,6 +16,7 @@
 
 #ifdef GASPI
 
+#include <cstdlib>
 #include <pthread.h>
 #include <cmath>
 
@@ -24,6 +25,7 @@
 
 int *segmentPtr = nullptr, *commPtr = nullptr;
 pthread_mutex_t *segmentMutex = nullptr;
+//int COMM_SIZE = strtol (getenv ("commSize"), nullptr, 0);
 
 // Free the destination offset array, flush the GASPI queue & free the segments
 void GASPI_finalize (int *intfDstIndex, int nbBlocks,

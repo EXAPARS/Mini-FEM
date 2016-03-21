@@ -148,8 +148,8 @@ void GASPI_halo_exchange (double *prec, double *srcDataSegment,
     #endif
         int begin       = intfIndex[i],
             end         = intfIndex[i+1],
-            size        = (end - begin)    * operatorDim * sizeof (double),
-            localOffset = begin            * operatorDim * sizeof (double),
+            size        = (end - begin)   * operatorDim * sizeof (double),
+            localOffset = begin           * operatorDim * sizeof (double),
             dstOffset   = intfDstIndex[i] * operatorDim * sizeof (double),
             neighbor    = neighborsList[i] - 1;
         gaspi_notification_id_t notifyID = rank;
