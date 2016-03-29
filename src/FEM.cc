@@ -234,11 +234,13 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (rank == 0) cout << "done\n\n";
 
         #ifdef GASPI
-            // Reset the segment and communication pointers
-            for (int i = 0; i < nbIntf; i++) {
-                segmentPtr[i] = 0;
-                commPtr[i] = 0;
-            }
+            #ifdef MULTITHREADED_COMM
+                // Reset the segment and communication pointers
+                for (int i = 0; i < nbIntf; i++) {
+                    segmentPtr[i] = 0;
+                    commPtr[i] = 0;
+                }
+            #endif
 
             // If queue is half full, wait for previous comms
             GASPI_wait_for_queue_half_full (queueID, rank);
