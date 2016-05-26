@@ -21,41 +21,44 @@
 
 #include <GASPI.h>
 
+#define COMM_SIZE 100
+//extern int COMM_SIZE;
+
 // Free the destination offset array, flush the GASPI queue & free the segments
-void GASPI_finalize (int *intfDestIndex, int nbBlocks, int rank,
+void GASPI_finalize (int *intfDstIndex, int nbBlocks,
                      gaspi_segment_id_t srcDataSegmentID,
-                     gaspi_segment_id_t destDataSegmentID,
+                     gaspi_segment_id_t dstDataSegmentID,
                      gaspi_segment_id_t srcOffsetSegmentID,
-                     gaspi_segment_id_t destOffsetSegmentID,
+                     gaspi_segment_id_t dstOffsetSegmentID,
                      gaspi_queue_id_t queueID);
 
 // Waits until given queue is empty if it's at least half full
-void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID);
+void GASPI_wait_for_queue_half_full (gaspi_queue_id_t queueID, int rank);
 
 // Get the max number of communications
 void GASPI_max_nb_communications (int *nbDCcomm, int *globalMax, int nbIntf,
-                                  int nbBlocks, int rank);
+                                  int nbBlocks);
 
 // Get the number of notifications coming from adjacent domains
-void GASPI_nb_notifications_exchange (int *neighborsList, int *nbDCcomm,
+void GASPI_nb_notifications_exchange (int *intfIndex, int *neighborsList,
                                       int *nbNotifications, int nbIntf, int nbBlocks,
                                       int rank, gaspi_segment_id_t destOffsetSegmentID,
                                       gaspi_queue_id_t queueID);
 
 // Get the adjacent domains destination offset
-void GASPI_offset_exchange (int *intfDestIndex, int *intfIndex, int *neighborsList,
+void GASPI_offset_exchange (int *intfDstIndex, int *intfIndex, int *neighborsList,
                             int nbIntf, int nbBlocks, int rank,
-                            gaspi_segment_id_t destOffsetSegmentID,
+                            gaspi_segment_id_t dstOffsetSegmentID,
                             gaspi_queue_id_t queueID);
 
 // Initialization of the GASPI segments & creation of the segment pointers
-void GASPI_init (double **srcDataSegment, double **destDataSegment,
-                 int **srcOffsetSegment, int **destOffsetSegment,
-                 int **intfDestIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
-                 int rank, int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
-                 gaspi_segment_id_t *destDataSegmentID,
+void GASPI_init (double **srcDataSegment, double **dstDataSegment,
+                 int **srcOffsetSegment, int **dstOffsetSegment,
+                 int **intfDstIndex, int nbIntf, int nbIntfNodes, int nbBlocks,
+                 int operatorDim, gaspi_segment_id_t *srcDataSegmentID,
+                 gaspi_segment_id_t *dstDataSegmentID,
                  gaspi_segment_id_t *srcOffsetSegmentID,
-                 gaspi_segment_id_t *destOffsetSegmentID, gaspi_queue_id_t *queueID);
+                 gaspi_segment_id_t *dstOffsetSegmentID, gaspi_queue_id_t *queueID);
 
 #endif
 #endif

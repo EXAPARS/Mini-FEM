@@ -64,7 +64,7 @@ int create_longest_color_part (int *colorPart, list_t *elemToElem, int nbElem)
 		    color++;
 		}
 		if (color >= MAX_COLOR) {
-		    cerr << "Error: Not enough colors !\n";
+		    cerr << "Error: Not enough colors.\n";
 		    exit (EXIT_FAILURE);
         }
         // Assign the first free color to current element

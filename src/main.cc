@@ -22,6 +22,7 @@
 #endif
 #include <iostream>
 #include <iomanip>
+#include <cstdlib>
 #include <DC.h>
 
 #include "globals.h"
@@ -42,7 +43,7 @@ extern "C" {
 string meshName, operatorName;
 int *colorToElem = nullptr;
 int nbTotalColors;
-//int MAX_ELEM_PER_PART = strtol (getenv ("elemPerPart"), nullptr, 0);
+//int MAX_ELEM_PER_PART = strtol (getenv ("maxElemPerPart"), nullptr, 0);
 
 // Help message
 void help () {
@@ -60,8 +61,8 @@ void check_args (int argCount, char **argValue, int *nbIter, int rank)
         exit (EXIT_FAILURE);
     }
     meshName = argValue[1];
-    if (meshName.compare ("LM6") && meshName.compare ("EIB") &&
-        meshName.compare ("FGN")) {
+    if (meshName.compare ("LM6")  && meshName.compare ("EIB") &&
+        meshName.compare ("FGN1") && meshName.compare ("FGN4")) {
         if (rank == 0) {
 		    cerr << "Incorrect argument \"" << meshName << "\".\n";
 		    help ();
@@ -101,6 +102,12 @@ int main (int argCount, char **argValue)
         MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
         MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
+        // Lazy Connect
+        gaspi_config_t config;
+        SUCCESS_OR_DIE (gaspi_config_get (&config));
+        config.build_infrastructure = GASPI_TOPOLOGY_DYNAMIC;
+        SUCCESS_OR_DIE (gaspi_config_set (config));
+
         SUCCESS_OR_DIE (gaspi_proc_init (GASPI_BLOCK));
         SUCCESS_OR_DIE (gaspi_proc_num ((gaspi_rank_t*)&nbBlocks));
         SUCCESS_OR_DIE (gaspi_proc_rank ((gaspi_rank_t*)&rank));
@@ -111,12 +118,11 @@ int main (int argCount, char **argValue)
     index_t nodeToElem;
     double *coord = nullptr, *nodeToNodeValue = nullptr, *prec = nullptr;
     int *nodeToNodeRow = nullptr, *nodeToNodeColumn = nullptr, *elemToNode = nullptr,
-        *intfIndex = nullptr, *intfNodes = nullptr, *intfDestIndex = nullptr,
+        *intfIndex = nullptr, *intfNodes = nullptr, *intfDstIndex = nullptr,
         *neighborsList = nullptr, *boundNodesCode = nullptr, *boundNodesList = nullptr,
         *checkBounds = nullptr, *elemToEdge = nullptr;
-    int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbDispNodes,
-        nbBoundNodes, operatorDim, operatorID, nbIter, error, nbNotifications = 0,
-        nbMaxComm = 0;
+    int nbElem, nbNodes, nbEdges, nbIntf, nbIntfNodes, nbBoundNodes, operatorDim,
+        operatorID, nbIter, error, nbNotifications = 0, nbMaxComm = 0;
 
     // Arguments initialization
     check_args (argCount, argValue, &nbIter, rank);
@@ -138,7 +144,7 @@ int main (int argCount, char **argValue)
     }
     read_input_data (&coord, &elemToNode, &neighborsList, &intfIndex, &intfNodes,
                      &boundNodesCode, &nbElem, &nbNodes, &nbEdges, &nbIntf,
-                     &nbIntfNodes, &nbDispNodes, &nbBoundNodes, nbBlocks, rank);
+                     &nbIntfNodes, &nbBoundNodes, nbBlocks, rank);
     if (rank == 0) {
         timer.stop_time ();
         cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -173,8 +179,7 @@ int main (int argCount, char **argValue)
                 cout << "Reading the D&C tree...              ";
                 timer.start_time ();
             }
-            DC_read_tree (treePath, nbElem, nbNodes, nbIntf, &nbNotifications,
-                          &nbMaxComm);
+            DC_read_tree (treePath, nbElem, nbNodes, nbIntf, &nbMaxComm);
             if (rank == 0) {
                 timer.stop_time ();
             	cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -255,17 +260,22 @@ int main (int argCount, char **argValue)
             cout << "Initializing GASPI lib...            ";
             timer.start_time ();
         }
-        double *srcDataSegment = nullptr,   *destDataSegment = nullptr;
-        int  *srcOffsetSegment = nullptr, *destOffsetSegment = nullptr;
-        gaspi_segment_id_t srcDataSegmentID, destDataSegmentID,
-                         srcOffsetSegmentID, destOffsetSegmentID;
+        double *srcDataSegment = nullptr,   *dstDataSegment = nullptr;
+        int  *srcOffsetSegment = nullptr, *dstOffsetSegment = nullptr;
+        gaspi_segment_id_t srcDataSegmentID, dstDataSegmentID,
+                         srcOffsetSegmentID, dstOffsetSegmentID;
         gaspi_queue_id_t queueID;
-        GASPI_init (&srcDataSegment, &destDataSegment, &srcOffsetSegment,
-                    &destOffsetSegment, &intfDestIndex, nbIntf, nbIntfNodes,
-                    nbBlocks, rank, operatorDim, &srcDataSegmentID, &destDataSegmentID,
-                    &srcOffsetSegmentID, &destOffsetSegmentID, &queueID);
-        GASPI_offset_exchange (intfDestIndex, intfIndex, neighborsList, nbIntf,
-                               nbBlocks, rank, destOffsetSegmentID, queueID);
+        GASPI_init (&srcDataSegment, &dstDataSegment, &srcOffsetSegment,
+                    &dstOffsetSegment, &intfDstIndex, nbIntf, nbIntfNodes,
+                    nbBlocks, operatorDim, &srcDataSegmentID, &dstDataSegmentID,
+                    &srcOffsetSegmentID, &dstOffsetSegmentID, &queueID);
+        GASPI_offset_exchange (intfDstIndex, intfIndex, neighborsList, nbIntf,
+                               nbBlocks, rank, dstOffsetSegmentID, queueID);
+        #ifdef MULTITHREADED_COMM
+            GASPI_nb_notifications_exchange (intfIndex, neighborsList,
+                                             &nbNotifications, nbIntf, nbBlocks, rank,
+                                             dstOffsetSegmentID, queueID);
+        #endif
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -284,13 +294,11 @@ int main (int argCount, char **argValue)
             nbDCcomm = new int [nbIntf] ();
         #endif
         DC_finalize_tree (nodeToNodeRow, elemToNode, intfIndex, intfNodes,
-                          intfDestIndex, nbDCcomm, nbElem, DIM_ELEM, nbBlocks,
+                          intfDstIndex, nbDCcomm, nbElem, DIM_ELEM, nbBlocks,
                           nbIntf, rank);
         #ifdef MULTITHREADED_COMM
-            GASPI_nb_notifications_exchange (neighborsList, nbDCcomm, &nbNotifications,
-                                             nbIntf, nbBlocks, rank,
-                                             destOffsetSegmentID, queueID);
-            GASPI_max_nb_communications (nbDCcomm, &nbMaxComm, nbIntf, nbBlocks, rank);
+            // Get the max number of comms to compute the notifyID
+            GASPI_max_nb_communications (nbDCcomm, &nbMaxComm, nbIntf, nbBlocks);
             delete[] nbDCcomm;
         #endif
         if (rank == 0) {
@@ -300,7 +308,7 @@ int main (int argCount, char **argValue)
             cout << "Storing the D&C tree...              ";
             timer.start_time ();
         }
-        DC_store_tree (treePath, nbElem, nbNodes, nbIntf, nbNotifications, nbMaxComm);
+        DC_store_tree (treePath, nbElem, nbNodes, nbIntf, nbMaxComm);
         if (rank == 0) {
             timer.stop_time ();
             cout << "done  (" << timer.get_avg_time () << " seconds)\n";
@@ -353,9 +361,9 @@ int main (int argCount, char **argValue)
               operatorDim, operatorID);
     #elif GASPI
               operatorDim, operatorID, nbMaxComm, nbNotifications, srcDataSegment,
-              destDataSegment, srcOffsetSegment, destOffsetSegment, intfDestIndex,
-              srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
-              destOffsetSegmentID, queueID);
+              dstDataSegment, srcOffsetSegment, dstOffsetSegment, intfDstIndex,
+              srcDataSegmentID, dstDataSegmentID, srcOffsetSegmentID,
+              dstOffsetSegmentID, queueID);
     #endif
     delete[] checkBounds, delete[] nodeToNodeColumn, delete[] nodeToNodeRow;
     delete[] intfNodes, delete[] intfIndex, delete[] neighborsList, delete[] coord;
@@ -372,9 +380,8 @@ int main (int argCount, char **argValue)
     #ifdef XMPI
         MPI_Finalize ();
     #elif GASPI
-        GASPI_finalize (intfDestIndex, nbBlocks, rank, srcDataSegmentID,
-                        destDataSegmentID, srcOffsetSegmentID, destOffsetSegmentID,
-                        queueID);
+        GASPI_finalize (intfDstIndex, nbBlocks, srcDataSegmentID, dstDataSegmentID,
+                        srcOffsetSegmentID, dstOffsetSegmentID, queueID);
     #endif
 
 	return EXIT_SUCCESS;

@@ -40,6 +40,10 @@
 #include "assembly.h"
 #include "FEM.h"
 
+#ifdef MULTITHREADED_COMM
+    extern int *segmentPtr, *commPtr;
+#endif
+
 // Return the euclidean norm of given array
 double compute_double_norm (double *tab, int size)
 {
@@ -141,12 +145,12 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int operatorID)
 #elif GASPI
                int operatorID, int nbMaxComm, int nbNotifications,
-               double *srcDataSegment, double *destDataSegment, int *srcOffsetSegment,
-               int *destOffsetSegment, int *intfDestIndex,
+               double *srcDataSegment, double *dstDataSegment, int *srcOffsetSegment,
+               int *dstOffsetSegment, int *intfDstIndex,
                gaspi_segment_id_t srcDataSegmentID,
-               gaspi_segment_id_t destDataSegmentID,
+               gaspi_segment_id_t dstDataSegmentID,
                gaspi_segment_id_t srcOffsetSegmentID,
-               gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID)
+               gaspi_segment_id_t dstOffsetSegmentID, gaspi_queue_id_t queueID)
 #endif
 {
     DC_timer ASMtimer, precInitTimer, haloTimer, precInverTimer;
@@ -180,9 +184,9 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                   elemToEdge, nbElem, nbEdges, operatorDim, operatorID
         #ifdef MULTITHREADED_COMM
                   , prec, srcDataSegment, srcOffsetSegment, neighborsList, intfIndex,
-                  intfDestIndex, nbBlocks, nbIntf, nbMaxComm, rank, iter,
-                  srcDataSegmentID, destDataSegmentID, srcOffsetSegmentID,
-                  destOffsetSegmentID, queueID
+                  intfDstIndex, nbBlocks, nbIntf, nbMaxComm, rank, iter,
+                  srcDataSegmentID, dstDataSegmentID, srcOffsetSegmentID,
+                  dstOffsetSegmentID, queueID
         #endif
                   );
         if (nbIter == 1 || iter > 0) ASMtimer.stop_cycles ();
@@ -203,19 +207,19 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) haloTimer.start_cycles ();
         #ifdef MULTITHREADED_COMM
             // Wait for multithreaded GASPI notifications sent during assembly step
-            GASPI_multithreaded_wait (prec, destDataSegment, intfNodes,
-                                      destOffsetSegment, nbNotifications, nbBlocks,
-                                      operatorDim, iter, destOffsetSegmentID, rank);
+            GASPI_multithreaded_wait (prec, dstDataSegment, intfNodes,
+                                      dstOffsetSegment, nbNotifications, nbBlocks,
+                                      operatorDim, rank, dstOffsetSegmentID);
         #else
             // Halo exchange
             #ifdef XMPI
                 MPI_halo_exchange (prec, intfIndex, intfNodes, neighborsList, nbBlocks,
                                    nbIntf, nbIntfNodes, operatorDim, rank);
             #elif GASPI
-                GASPI_halo_exchange (prec, srcDataSegment, destDataSegment, intfIndex,
-                                     intfNodes, neighborsList, intfDestIndex,
+                GASPI_halo_exchange (prec, srcDataSegment, dstDataSegment, intfIndex,
+                                     intfNodes, neighborsList, intfDstIndex,
                                      nbBlocks, nbIntf, operatorDim, rank, iter,
-                                     srcDataSegmentID, destDataSegmentID, queueID);
+                                     srcDataSegmentID, dstDataSegmentID, queueID);
             #endif
         #endif
         if (nbIter == 1 || iter > 0) haloTimer.stop_cycles ();
@@ -229,16 +233,26 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
         if (nbIter == 1 || iter > 0) precInverTimer.stop_cycles ();
         if (rank == 0) cout << "done\n\n";
 
-        // Double buffering flip/flop
         #ifdef GASPI
+            #ifdef MULTITHREADED_COMM
+                // Reset the segment and communication pointers
+                for (int i = 0; i < nbIntf; i++) {
+                    segmentPtr[i] = 0;
+                    commPtr[i] = 0;
+                }
+            #endif
+
+            // If queue is half full, wait for previous comms
+            GASPI_wait_for_queue_half_full (queueID, rank);
+
+            // Double buffering flip/flop
             gaspi_segment_id_t tmpSegmentID;
-            tmpSegmentID        = srcDataSegmentID;
-            srcDataSegmentID    = destDataSegmentID;
-            destDataSegmentID   = tmpSegmentID;
-            tmpSegmentID        = srcOffsetSegmentID;
-            srcOffsetSegmentID  = destOffsetSegmentID;
-            destOffsetSegmentID = tmpSegmentID;
-            GASPI_wait_for_queue_half_full (queueID);
+            tmpSegmentID       = srcDataSegmentID;
+            srcDataSegmentID   = dstDataSegmentID;
+            dstDataSegmentID   = tmpSegmentID;
+            tmpSegmentID       = srcOffsetSegmentID;
+            srcOffsetSegmentID = dstOffsetSegmentID;
+            dstOffsetSegmentID = tmpSegmentID;
         #endif
     }
 

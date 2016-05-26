@@ -44,11 +44,11 @@ void FEM_loop (double *prec, double *coord, double *nodeToNodeValue,
                int operatorID);
 #elif GASPI
                int operatorID, int nbMaxComm, int nbNotifications,
-               double *srcDataSegment, double *destDataSegment, int *srcOffsetSegment,
-               int *destOffsetSegment, int *intfDestIndex,
+               double *srcDataSegment, double *dstDataSegment, int *srcOffsetSegment,
+               int *dstOffsetSegment, int *intfDstIndex,
                gaspi_segment_id_t srcDataSegmentID,
-               gaspi_segment_id_t destDataSegmentID,
+               gaspi_segment_id_t dstDataSegmentID,
                gaspi_segment_id_t srcOffsetSegmentID,
-               gaspi_segment_id_t destOffsetSegmentID, gaspi_queue_id_t queueID);
+               gaspi_segment_id_t dstOffsetSegmentID, gaspi_queue_id_t queueID);
 #endif
 #endif
