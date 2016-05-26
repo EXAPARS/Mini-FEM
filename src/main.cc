@@ -102,6 +102,12 @@ int main (int argCount, char **argValue)
         MPI_Comm_size (MPI_COMM_WORLD, &nbBlocks);
         MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     #elif GASPI
+        // Lazy Connect
+        gaspi_config_t config;
+        SUCCESS_OR_DIE (gaspi_config_get (&config));
+        config.build_infrastructure = GASPI_TOPOLOGY_DYNAMIC;
+        SUCCESS_OR_DIE (gaspi_config_set (config));
+
         SUCCESS_OR_DIE (gaspi_proc_init (GASPI_BLOCK));
         SUCCESS_OR_DIE (gaspi_proc_num ((gaspi_rank_t*)&nbBlocks));
         SUCCESS_OR_DIE (gaspi_proc_rank ((gaspi_rank_t*)&rank));
