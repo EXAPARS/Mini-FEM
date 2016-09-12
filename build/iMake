@@ -85,8 +85,10 @@ for i in $@; do
         ARCHI="SSE"
     elif [[ $i == "avx" ]]; then
         ARCHI="AVX"
-    elif [[ $i == "mic" ]]; then
-        ARCHI="MIC"
+    elif [[ $i == "knc" ]]; then
+        ARCHI="KNC"
+    elif [[ $i == "knl" ]]; then
+        ARCHI="KNL"
     elif [[ $i == "tree" ]]; then
         TREE=1
     elif [[ $i == "stat" ]] || [[ $i == "stats" ]]; then
@@ -129,7 +131,7 @@ then
     exit
 fi
 if [[ $VECTO == 1 ]] && [[ $ARCHI == 0 ]]; then
-    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, MIC)\\033[0;39m"
+    echo -e "\\033[1;31mPlease specify the vector length (SSE, AVX, KNC, KNL)\\033[0;39m"
     exit
 fi
 if [ ! -d "$DATA_PATH" ]; then
@@ -198,8 +200,8 @@ cd $DC_BUILD
 ./iMake $DC_ARGUMENTS
 cd $CURRENT_PATH
 
-# Cross compile for MIC
-if [[ $ARCHI == "mic" ]]; then
+# Cross compile for KNC
+if [[ $ARCHI == "knc" ]]; then
     export CC=icc
     export CXX=icpc
     export FC=ifort
