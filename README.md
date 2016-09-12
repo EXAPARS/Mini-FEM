@@ -31,7 +31,7 @@ The 2 last options requires to have the DC-lib.
 The path to the DC-lib can be set at the begining of the iMake file.
 
 - The $VECTOR_LENGTH variable must be specified when using the D&C Vec version.
-  It can be either SSE, AVX or MIC depending on the target architecture.
+  It can be either SSE, AVX, KNC, or KNL depending on the target architecture.
 
 - The tree option is used to create a new D&C tree and new permutation functions.
   If not specified, the application will try to read the existing tree and permutations.
@@ -40,7 +40,7 @@ The path to the DC-lib can be set at the begining of the iMake file.
   and to the number of MPI processes. The files name can be read this way:
   $VERSION_$PARTITION_SIZE_$NB_PROCESS_$PROCESS_RANK
 
-If you want to build binaries for Xeon Phi, you need to use the MIC option whatever
+If you want to build binaries for Xeon Phi, you need to use the KNC or KNL option whatever
 the code version.
 
 How to execute
